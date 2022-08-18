@@ -1,0 +1,34 @@
+.sky {
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(rgb(70, 178, 192), rgb(60, 95, 160));
+  width: 100%;
+  height: 100%;
+  position: absolute;
+}
+
+.ground {
+  background: linear-gradient(rgb(131, 85, 17), rgb(105, 60, 22));
+  width: 100%;
+  top: 85%;
+  bottom: 0%;
+  position: absolute;
+}
+
+.bird {
+  background-image: url("../public/cloud.png");
+  background-size: cover;
+  left: 80px;
+  bottom: 440px;
+  position: absolute;
+  height: 45px;
+  width: 60px;
+}
+
+.cake {
+  background-image: url("../public/cake.png");
+  background-size: cover;
+  width: 50px;
+  height: 50px;
+  position: absolute;
+}
