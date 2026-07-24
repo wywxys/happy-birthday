@@ -169,7 +169,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Canvas renders at correct aspect ratio, no console errors, page.tsx remains a Server Component. Failure: SSR crash → verify GameShell has "use client" and uses dynamic({ssr:false}); "events" module error → replace Node EventEmitter with Phaser.Events.EventEmitter. Evidence .omo/evidence/task-4-happy-birthday-upgrade.txt
   Commit: Y | feat(game): Phaser 4 canvas setup with React bridge and browser-safe EventBus
 
-- [ ] 5. Implement Bird/Cloud character with gravity, jump, and sprite animation
+- [x] 5. Implement Bird/Cloud character with gravity, jump, and sprite animation
   What to do: Create src/game/scenes/GameScene.ts (extends Phaser.Scene). Load cloud.png as sprite (optimize to ≤50KB / max 200×150px first if not already done in Todo 2). Create player with Arcade physics body: gravity.y = 800, setCollideWorldBounds(true). Jump on pointer-down / spacebar: setVelocityY(-350). Add wing-flap tween (slight rotation oscillation). Clamp to world bounds (top ceiling = bounce, floor collision = game over). Emit "game-over" via EventBus on floor hit.
   NOTE on cloud.png: This asset is the PLAYER CHARACTER sprite (the "cloud" / 云宝). It is NOT the same as cloud.svg which is used for background decoration (Todo 11). If cloud.png is >100KB, it MUST be optimized/resized before use as a Phaser sprite texture (target: ≤50KB, 120×90px max).
   Must NOT do: Do not use setInterval. Do not use document.querySelector. Do not hardcode pixel positions — use Phaser's scale-aware coordinates (this.scale.width/height). Bird must NOT escape canvas bounds. Do not confuse cloud.png (player) with cloud.svg (background decoration).
@@ -179,7 +179,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Click makes bird jump smoothly; gravity pulls back down; floor contact triggers game-over. Failure: Bird clips through floor → check collideWorldBounds; texture loading slow → check file size optimization. Evidence .omo/evidence/task-5-happy-birthday-upgrade.txt
   Commit: Y | feat(game): bird character with physics, jump, and animation
 
-- [ ] 6. Implement Cake obstacle spawning and movement system
+- [x] 6. Implement Cake obstacle spawning and movement system
   What to do: In GameScene, create a Phaser.Physics.Arcade.Group for cakes. Load cake.png as texture. Timer event (this.time.addEvent) spawns cakes every 1500ms from right edge at random Y (within playable bounds, using this.scale.height * 0.2 to this.scale.height * 0.7). Cakes move left at velocity -200. Auto-destroy when off-screen (x < -60). Add slight rotation tween to cakes for visual interest. Difficulty: spawn rate and speed will be adjustable (prep for Todo 9).
   Must NOT do: Do not use setTimeout/setInterval. Do not use DOM createElement. Do not spawn cakes after game over. Cakes must NOT accumulate in memory after leaving screen.
   Parallelization: Wave 2 | Blocked by: 4 | Blocks: 7,8
