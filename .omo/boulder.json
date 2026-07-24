@@ -24,7 +24,7 @@
       "plan_name": "happy-birthday-upgrade",
       "status": "active",
       "started_at": "2026-07-24T06:52:01.600Z",
-      "updated_at": "2026-07-24T08:14:04.359Z",
+      "updated_at": "2026-07-24T08:32:48.710Z",
       "session_ids": [
         "opencode:ses_06d4326eeffeEQw9mj1lN3so35"
       ],
@@ -97,6 +97,32 @@
           "status": "completed",
           "ended_at": "2026-07-24T08:14:04.359Z",
           "elapsed_ms": 65047
+        },
+        "todo:10": {
+          "task_key": "todo:10",
+          "task_label": "10",
+          "task_title": "Add particle effects: cake-eat sparkles, death burst, birthday confetti",
+          "session_id": "opencode:ses_06cce771dffeZr6OxBM9fvxfmo",
+          "agent": "Sisyphus-Junior",
+          "category": "deep",
+          "updated_at": "2026-07-24T08:25:37.436Z",
+          "started_at": "2026-07-24T08:21:01.645Z",
+          "status": "completed",
+          "ended_at": "2026-07-24T08:25:37.436Z",
+          "elapsed_ms": 275791
+        },
+        "todo:11": {
+          "task_key": "todo:11",
+          "task_label": "11",
+          "task_title": "Create parallax scrolling background with gradient sky and clouds",
+          "session_id": "opencode:ses_06cc4617cffe3B3UKGyketvsbj",
+          "agent": "Sisyphus-Junior",
+          "category": "deep",
+          "updated_at": "2026-07-24T08:32:48.710Z",
+          "started_at": "2026-07-24T08:31:19.814Z",
+          "status": "completed",
+          "ended_at": "2026-07-24T08:32:48.710Z",
+          "elapsed_ms": 88896
         }
       }
     }
@@ -104,7 +130,7 @@
   "active_plan": "C:\\Users\\I764631\\GitProjects\\happy-birthday\\.omo\\plans\\happy-birthday-upgrade.md",
   "started_at": "2026-07-24T06:52:01.600Z",
   "status": "active",
-  "updated_at": "2026-07-24T08:14:04.359Z",
+  "updated_at": "2026-07-24T08:32:48.710Z",
   "session_ids": [
     "opencode:ses_06d4326eeffeEQw9mj1lN3so35"
   ],
@@ -177,6 +203,32 @@
       "status": "completed",
       "ended_at": "2026-07-24T08:14:04.359Z",
       "elapsed_ms": 65047
+    },
+    "todo:10": {
+      "task_key": "todo:10",
+      "task_label": "10",
+      "task_title": "Add particle effects: cake-eat sparkles, death burst, birthday confetti",
+      "session_id": "opencode:ses_06cce771dffeZr6OxBM9fvxfmo",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-24T08:25:37.436Z",
+      "started_at": "2026-07-24T08:21:01.645Z",
+      "status": "completed",
+      "ended_at": "2026-07-24T08:25:37.436Z",
+      "elapsed_ms": 275791
+    },
+    "todo:11": {
+      "task_key": "todo:11",
+      "task_label": "11",
+      "task_title": "Create parallax scrolling background with gradient sky and clouds",
+      "session_id": "opencode:ses_06cc4617cffe3B3UKGyketvsbj",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-07-24T08:32:48.710Z",
+      "started_at": "2026-07-24T08:31:19.814Z",
+      "status": "completed",
+      "ended_at": "2026-07-24T08:32:48.710Z",
+      "elapsed_ms": 88896
     }
   },
   "agent": "atlas"

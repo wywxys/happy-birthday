@@ -227,7 +227,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Play long enough to see 3 difficulty bumps (at 5, 10, 15); feel progressively harder but not impossible; score 20 triggers victory not difficulty bump. Failure: Game becomes unplayable → adjust caps; difficulty bump fires at 20 → verify victory check precedes difficulty check in eatCake. Evidence .omo/evidence/task-9-happy-birthday-upgrade.txt
   Commit: Y | feat(game): progressive difficulty with speed and spawn rate scaling
 
-- [ ] 10. Add particle effects: cake-eat sparkles, death burst, birthday confetti
+- [x] 10. Add particle effects: cake-eat sparkles, death burst, birthday confetti
   What to do: Create particle configurations using Phaser.GameObjects.Particles.ParticleEmitter. (1) Cake-eat: brief burst of 15-20 golden star particles at cake position, gravity-affected, fade out in 500ms. (2) Death: burst of 30 white/blue feather-like particles from bird position, spread outward. (3) Level-up: brief confetti shower (multi-colored rectangles falling from top). (4) Victory confetti (for birthday finale): sustained confetti emitter for 5 seconds. Use Phaser's built-in particle system (generateTexture for simple shapes if no sprite needed).
   Must NOT do: Do not use DOM elements for particles. Do not leave emitters running indefinitely (set lifespan + stopAfter). Performance: max 200 particles on screen at once.
   Parallelization: Wave 4 | Blocked by: 9 | Blocks: 12
@@ -236,7 +236,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Each effect triggers at correct moment, looks good, cleans up. Failure: FPS drop → reduce particle count. Evidence .omo/evidence/task-10-happy-birthday-upgrade.txt
   Commit: Y | feat(game): particle effects for eat, death, level-up, and confetti
 
-- [ ] 11. Create parallax scrolling background with gradient sky and clouds
+- [x] 11. Create parallax scrolling background with gradient sky and clouds
   What to do: Replace CSS gradient with Phaser rendered background. Layer 0: gradient sky (blue→purple, drawn via Graphics or a pre-rendered texture). Layer 1: distant clouds (slow scroll, 30% speed) — use cloud.svg as decorative cloud texture (NOT cloud.png which is the player character). Layer 2: mid clouds (60% speed). Layer 3: near ground/hills (100% speed). Use Phaser.GameObjects.TileSprite for seamless horizontal scrolling. Generate cloud textures procedurally (Graphics API: ellipses with white/grey) OR use cloud.svg scaled. Ground: gradient brown with grass edge detail.
   NOTE: This todo only depends on Todo 4 (Phaser canvas). It is placed in Wave 4 for depth-ordering reasons — background layers must be finalized after game objects are defined to ensure correct setDepth() values. However, it can be started earlier if Wave 2/3 are complete.
   Must NOT do: Do not use CSS for game background (everything in canvas). Do not make background elements interactive or collidable. Keep parallax subtle (not distracting). Do NOT use cloud.png for background clouds (that is the player character sprite).
@@ -255,7 +255,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Resize browser window → game rescales smoothly; play on simulated mobile → works. Failure: Game overflows → check parent div sizing. Evidence .omo/evidence/task-12-happy-birthday-upgrade.txt
   Commit: Y | feat(game): responsive design with Scale.FIT and touch support
 
-- [ ] 13. Rewrite Conversation/Intro UI with Framer Motion animations
+- [x] 13. Rewrite Conversation/Intro UI with Framer Motion animations
   What to do: Create src/components/ConversationOverlay.tsx ("use client"). Port the 10 conversation lines and speaker assignments from Conversation.js. Use Framer Motion AnimatePresence for enter/exit of each dialog bubble. Speaker image: slide in from right with spring animation. Dialog text: fade up with stagger. Skip button: animated hover state. Use motion/react imports (new package name). Store conversation state in React (useState for index). On conversation end: emit 'intro-complete' → show game canvas. Overlay renders on top of game canvas (z-index layer).
   Must NOT do: Do not use CSS animation classes (replace with Framer Motion). Do not block game loading (conversation shows while Phaser loads in background). Do not lose any of the 10 original dialog lines.
   Parallelization: Wave 5 | Blocked by: 2 | Blocks: 14

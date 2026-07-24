@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { BackgroundScene } from "./scenes/BackgroundScene";
 import { GameScene } from "./scenes/GameScene";
 
 export function createGame(parent: HTMLElement): Phaser.Game {
@@ -7,7 +8,7 @@ export function createGame(parent: HTMLElement): Phaser.Game {
     width: 800,
     height: 600,
     parent,
-    backgroundColor: "#4ab2c0",
+    transparent: true,
     physics: {
       default: "arcade",
       arcade: {
@@ -19,6 +20,6 @@ export function createGame(parent: HTMLElement): Phaser.Game {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
-    scene: [GameScene],
+    scene: [BackgroundScene, GameScene],
   });
 }

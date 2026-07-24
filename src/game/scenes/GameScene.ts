@@ -9,6 +9,9 @@ const BIRD_DISPLAY_HEIGHT = 45;
 const BIRD_BODY_WIDTH = 50;
 const BIRD_BODY_HEIGHT = 35;
 const CAKE_TEXTURE_KEY = "cake";
+const STAR_PARTICLE_TEXTURE_KEY = "star-particle";
+const FEATHER_PARTICLE_TEXTURE_KEY = "feather-particle";
+const CONFETTI_PARTICLE_TEXTURE_KEY = "confetti-particle";
 const CAKE_DISPLAY_SIZE = 50;
 const CAKE_BODY_SIZE = 40;
 const CAKE_OFFSCREEN_X = -60;
@@ -55,6 +58,7 @@ export class GameScene extends Phaser.Scene {
   create(): void {
     this.resetState();
     this.physics.resume();
+    this.generateParticleTextures();
 
     const x = this.scale.width * 0.1;
     const y = this.scale.height * 0.5;
@@ -106,6 +110,32 @@ export class GameScene extends Phaser.Scene {
     });
 
     EventBus.emit(GameEvents.CURRENT_SCENE_READY, this);
+  }
+
+  private generateParticleTextures(): void {
+    if (!this.textures.exists(STAR_PARTICLE_TEXTURE_KEY)) {
+      const starGfx = this.make.graphics({ x: 0, y: 0 });
+      starGfx.fillStyle(0xffd700);
+      starGfx.fillCircle(4, 4, 4);
+      starGfx.generateTexture(STAR_PARTICLE_TEXTURE_KEY, 8, 8);
+      starGfx.destroy();
+    }
+
+    if (!this.textures.exists(FEATHER_PARTICLE_TEXTURE_KEY)) {
+      const featherGfx = this.make.graphics({ x: 0, y: 0 });
+      featherGfx.fillStyle(0xffffff);
+      featherGfx.fillEllipse(3, 5, 6, 10);
+      featherGfx.generateTexture(FEATHER_PARTICLE_TEXTURE_KEY, 6, 10);
+      featherGfx.destroy();
+    }
+
+    if (!this.textures.exists(CONFETTI_PARTICLE_TEXTURE_KEY)) {
+      const confettiGfx = this.make.graphics({ x: 0, y: 0 });
+      confettiGfx.fillStyle(0xffffff);
+      confettiGfx.fillRect(0, 0, 4, 8);
+      confettiGfx.generateTexture(CONFETTI_PARTICLE_TEXTURE_KEY, 4, 8);
+      confettiGfx.destroy();
+    }
   }
 
   update(): void {
@@ -221,6 +251,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     const cake = cakeObj as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+    this.emitEatParticles(cake.x, cake.y);
     cake.destroy();
     this.score++;
     EventBus.emit(GameEvents.SCORE_UPDATE, this.score);
@@ -260,6 +291,7 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer?.destroy();
     this.physics.pause();
     bird.setTint(0xff0000);
+    this.emitDeathParticles();
     EventBus.emit(GameEvents.GAME_OVER, { score: this.score });
   }
 
@@ -267,7 +299,64 @@ export class GameScene extends Phaser.Scene {
     this.gameState = GameState.VICTORY;
     this.spawnTimer?.destroy();
     this.physics.pause();
+    this.emitVictoryConfetti();
     EventBus.emit(GameEvents.VICTORY, { score: this.score, time: this.time.now });
+  }
+
+  private emitEatParticles(x: number, y: number): void {
+    const emitter = this.add.particles(x, y, STAR_PARTICLE_TEXTURE_KEY, {
+      speed: { min: 50, max: 150 },
+      angle: { min: 0, max: 360 },
+      lifespan: 500,
+      quantity: 18,
+      gravityY: 200,
+      alpha: { start: 1, end: 0 },
+      scale: { start: 0.8, end: 0.2 },
+      emitting: false,
+    });
+    emitter.explode(18);
+    this.time.delayedCall(600, () => emitter.destroy());
+  }
+
+  private emitDeathParticles(): void {
+    if (!this.bird) {
+      return;
+    }
+
+    const emitter = this.add.particles(this.bird.x, this.bird.y, FEATHER_PARTICLE_TEXTURE_KEY, {
+      speed: { min: 80, max: 200 },
+      angle: { min: 0, max: 360 },
+      lifespan: 800,
+      quantity: 30,
+      gravityY: 150,
+      alpha: { start: 1, end: 0 },
+      scale: { start: 1, end: 0.3 },
+      tint: [0xffffff, 0xaaddff, 0x88ccee],
+      emitting: false,
+    });
+    emitter.explode(30);
+    this.time.delayedCall(1000, () => emitter.destroy());
+  }
+
+  private emitVictoryConfetti(): void {
+    const emitter = this.add.particles(this.scale.width / 2, -20, CONFETTI_PARTICLE_TEXTURE_KEY, {
+      x: { min: -this.scale.width / 2, max: this.scale.width / 2 },
+      speed: { min: 100, max: 300 },
+      angle: { min: 80, max: 100 },
+      lifespan: 3000,
+      quantity: 3,
+      frequency: 50,
+      gravityY: 200,
+      alpha: { start: 1, end: 0.5 },
+      scale: { start: 1, end: 0.5 },
+      rotate: { min: 0, max: 360 },
+      tint: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0xffd700],
+    });
+
+    this.time.delayedCall(5000, () => {
+      emitter.stop();
+      this.time.delayedCall(3000, () => emitter.destroy());
+    });
   }
 
   private handleWorldBounds(body: Phaser.Physics.Arcade.Body, _up: boolean, down: boolean): void {
