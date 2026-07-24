@@ -11,4 +11,4 @@ export const GameEvents = {
   CURRENT_SCENE_READY: "current-scene-ready",
 } as const;
 
-export type GameEventType = typeof GameEvents[keyof typeof GameEvents];
+export type GameEventType = (typeof GameEvents)[keyof typeof GameEvents];

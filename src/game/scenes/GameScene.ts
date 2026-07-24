@@ -93,7 +93,13 @@ export class GameScene extends Phaser.Scene {
       immovable: true,
     });
 
-    this.physics.add.overlap(bird, this.cakeGroup, this.eatCake, undefined, this);
+    this.physics.add.overlap(
+      bird,
+      this.cakeGroup,
+      this.eatCake,
+      undefined,
+      this,
+    );
 
     this.startText = this.add
       .text(this.scale.width / 2, this.scale.height * 0.3, "点击屏幕开始", {
@@ -145,7 +151,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    this.cakeGroup.getChildren().forEach((child) => {
+    for (const child of this.cakeGroup.getChildren()) {
       const cake = child as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
       if (
         cake.active &&
@@ -154,13 +160,13 @@ export class GameScene extends Phaser.Scene {
       ) {
         cake.setData("passed", true);
         this.gameOver();
-        return;
+        continue;
       }
 
       if (cake.x < CAKE_OFFSCREEN_X) {
         cake.destroy();
       }
-    });
+    }
   }
 
   private resetState(): void {
@@ -231,7 +237,11 @@ export class GameScene extends Phaser.Scene {
     const maxY = this.scale.height * 0.75;
     const y = Phaser.Math.Between(minY, maxY);
 
-    const cake = this.cakeGroup.create(x, y, CAKE_TEXTURE_KEY) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
+    const cake = this.cakeGroup.create(
+      x,
+      y,
+      CAKE_TEXTURE_KEY,
+    ) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
     cake.setDisplaySize(CAKE_DISPLAY_SIZE, CAKE_DISPLAY_SIZE);
     cake.body.setSize(CAKE_BODY_SIZE, CAKE_BODY_SIZE);
     cake.setVelocityX(-this.currentSpeed);
@@ -245,7 +255,10 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private eatCake(_bird: ArcadeOverlapObject, cakeObj: ArcadeOverlapObject): void {
+  private eatCake(
+    _bird: ArcadeOverlapObject,
+    cakeObj: ArcadeOverlapObject,
+  ): void {
     if (this.gameState !== GameState.PLAYING) {
       return;
     }
@@ -267,8 +280,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private increaseDifficulty(): void {
-    this.currentSpeed = Math.min(this.currentSpeed + this.speedIncrement, this.maxSpeed);
-    this.currentDelay = Math.max(this.currentDelay - this.delayDecrement, this.minDelay);
+    this.currentSpeed = Math.min(
+      this.currentSpeed + this.speedIncrement,
+      this.maxSpeed,
+    );
+    this.currentDelay = Math.max(
+      this.currentDelay - this.delayDecrement,
+      this.minDelay,
+    );
 
     if (this.spawnTimer !== undefined) {
       this.spawnTimer.reset({
@@ -300,7 +319,10 @@ export class GameScene extends Phaser.Scene {
     this.spawnTimer?.destroy();
     this.physics.pause();
     this.emitVictoryConfetti();
-    EventBus.emit(GameEvents.VICTORY, { score: this.score, time: this.time.now });
+    EventBus.emit(GameEvents.VICTORY, {
+      score: this.score,
+      time: this.time.now,
+    });
   }
 
   private emitEatParticles(x: number, y: number): void {
@@ -323,35 +345,47 @@ export class GameScene extends Phaser.Scene {
       return;
     }
 
-    const emitter = this.add.particles(this.bird.x, this.bird.y, FEATHER_PARTICLE_TEXTURE_KEY, {
-      speed: { min: 80, max: 200 },
-      angle: { min: 0, max: 360 },
-      lifespan: 800,
-      quantity: 30,
-      gravityY: 150,
-      alpha: { start: 1, end: 0 },
-      scale: { start: 1, end: 0.3 },
-      tint: [0xffffff, 0xaaddff, 0x88ccee],
-      emitting: false,
-    });
+    const emitter = this.add.particles(
+      this.bird.x,
+      this.bird.y,
+      FEATHER_PARTICLE_TEXTURE_KEY,
+      {
+        speed: { min: 80, max: 200 },
+        angle: { min: 0, max: 360 },
+        lifespan: 800,
+        quantity: 30,
+        gravityY: 150,
+        alpha: { start: 1, end: 0 },
+        scale: { start: 1, end: 0.3 },
+        tint: [0xffffff, 0xaaddff, 0x88ccee],
+        emitting: false,
+      },
+    );
     emitter.explode(30);
     this.time.delayedCall(1000, () => emitter.destroy());
   }
 
   private emitVictoryConfetti(): void {
-    const emitter = this.add.particles(this.scale.width / 2, -20, CONFETTI_PARTICLE_TEXTURE_KEY, {
-      x: { min: -this.scale.width / 2, max: this.scale.width / 2 },
-      speed: { min: 100, max: 300 },
-      angle: { min: 80, max: 100 },
-      lifespan: 3000,
-      quantity: 3,
-      frequency: 50,
-      gravityY: 200,
-      alpha: { start: 1, end: 0.5 },
-      scale: { start: 1, end: 0.5 },
-      rotate: { min: 0, max: 360 },
-      tint: [0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0xffd700],
-    });
+    const emitter = this.add.particles(
+      this.scale.width / 2,
+      -20,
+      CONFETTI_PARTICLE_TEXTURE_KEY,
+      {
+        x: { min: -this.scale.width / 2, max: this.scale.width / 2 },
+        speed: { min: 100, max: 300 },
+        angle: { min: 80, max: 100 },
+        lifespan: 3000,
+        quantity: 3,
+        frequency: 50,
+        gravityY: 200,
+        alpha: { start: 1, end: 0.5 },
+        scale: { start: 1, end: 0.5 },
+        rotate: { min: 0, max: 360 },
+        tint: [
+          0xff0000, 0x00ff00, 0x0000ff, 0xffff00, 0xff00ff, 0x00ffff, 0xffd700,
+        ],
+      },
+    );
 
     this.time.delayedCall(5000, () => {
       emitter.stop();
@@ -359,7 +393,11 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  private handleWorldBounds(body: Phaser.Physics.Arcade.Body, _up: boolean, down: boolean): void {
+  private handleWorldBounds(
+    body: Phaser.Physics.Arcade.Body,
+    _up: boolean,
+    down: boolean,
+  ): void {
     if (
       down &&
       body.gameObject === this.bird &&

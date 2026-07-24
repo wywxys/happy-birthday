@@ -39,7 +39,13 @@ export class BackgroundScene extends Phaser.Scene {
       gfx.generateTexture(farKey, 450, 80);
       gfx.destroy();
     }
-    this.cloudsFar = this.add.tileSprite(width / 2, height * 0.2, width, 80, farKey);
+    this.cloudsFar = this.add.tileSprite(
+      width / 2,
+      height * 0.2,
+      width,
+      80,
+      farKey,
+    );
 
     const midKey = "clouds-mid";
     if (!this.textures.exists(midKey)) {
@@ -51,7 +57,13 @@ export class BackgroundScene extends Phaser.Scene {
       gfx.generateTexture(midKey, 420, 80);
       gfx.destroy();
     }
-    this.cloudsMid = this.add.tileSprite(width / 2, height * 0.4, width, 80, midKey);
+    this.cloudsMid = this.add.tileSprite(
+      width / 2,
+      height * 0.4,
+      width,
+      80,
+      midKey,
+    );
 
     const groundKey = "ground-tile";
     const groundH = Math.floor(height * 0.15);
@@ -64,7 +76,13 @@ export class BackgroundScene extends Phaser.Scene {
       gfx.generateTexture(groundKey, width, groundH);
       gfx.destroy();
     }
-    this.ground = this.add.tileSprite(width / 2, height - groundH / 2, width, groundH, groundKey);
+    this.ground = this.add.tileSprite(
+      width / 2,
+      height - groundH / 2,
+      width,
+      groundH,
+      groundKey,
+    );
   }
 
   update(_time: number, delta: number): void {

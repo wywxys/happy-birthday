@@ -1,8 +1,8 @@
 "use client";
 
-import dynamic from "next/dynamic";
-import { useState, useEffect } from "react";
 import { motion } from "motion/react";
+import dynamic from "next/dynamic";
+import { useEffect, useState } from "react";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
 
@@ -11,7 +11,9 @@ const PhaserGame = dynamic(() => import("@/game/PhaserGame"), {
 });
 
 export default function GameShell() {
-  const [gameState, setGameState] = useState<"intro" | "playing" | "victory" | "gameover">("intro");
+  const [gameState, setGameState] = useState<
+    "intro" | "playing" | "victory" | "gameover"
+  >("intro");
   const [score, setScore] = useState(0);
 
   useEffect(() => {
@@ -61,7 +63,7 @@ export default function GameShell() {
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-neutral-900 overflow-hidden relative">
       <PhaserGame />
-      
+
       {gameState === "intro" && (
         <ConversationOverlay onComplete={() => setGameState("playing")} />
       )}
@@ -77,7 +79,9 @@ export default function GameShell() {
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
         >
-          <h2 className="text-4xl md:text-6xl font-bold text-red-500 mb-6">游戏结束 😢</h2>
+          <h2 className="text-4xl md:text-6xl font-bold text-red-500 mb-6">
+            游戏结束 😢
+          </h2>
           <p className="text-white/80 text-xl mb-8">最终得分: {score} 🎂</p>
           <motion.button
             onClick={handleRestart}

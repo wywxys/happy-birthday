@@ -24,5 +24,7 @@ export default function PhaserGame() {
     };
   }, []);
 
-  return <div ref={containerRef} id="game-container" className="w-full h-full" />;
+  return (
+    <div ref={containerRef} id="game-container" className="w-full h-full" />
+  );
 }

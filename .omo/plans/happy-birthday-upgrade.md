@@ -289,7 +289,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Read through doc — clear, actionable, complete. Failure: Missing section → add it. Evidence .omo/evidence/task-15-happy-birthday-upgrade.txt
   Commit: Y | docs(harness): comprehensive HARNESS.md deployment plan
 
-- [ ] 16. Final integration: wire all components, verify build, clean up
+- [x] 16. Final integration: wire all components, verify build, clean up
   What to do: Wire everything together in src/app/page.tsx: ConversationOverlay → PhaserGame → ScoreUI → VictoryScreen. Verify: `bun run build` passes, `bun run dev` works end-to-end, all imports resolve, no TypeScript errors, no console errors. Clean up: remove old pages/ directory remnants (if any), remove package-lock.json, remove old styles/ directory, update README.md with new instructions (how to run with bun, game description, tech stack). Run `bunx biome check --write .` for formatting.
   Must NOT do: Do not leave dead code. Do not leave TODO comments (resolve them). Do not leave console.log statements.
   Parallelization: Wave 6 | Blocked by: 14,15 | Blocks: F1-F4

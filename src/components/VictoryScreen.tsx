@@ -1,9 +1,9 @@
 "use client";
 
-import { useRef, useMemo } from "react";
-import { motion } from "motion/react";
-import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
+import gsap from "gsap";
+import { motion } from "motion/react";
+import { useMemo, useRef } from "react";
 
 gsap.registerPlugin(useGSAP);
 
@@ -12,25 +12,39 @@ interface VictoryScreenProps {
   onRestart: () => void;
 }
 
-export default function VictoryScreen({ score, onRestart }: VictoryScreenProps) {
+export default function VictoryScreen({
+  score,
+  onRestart,
+}: VictoryScreenProps) {
   const titleRef = useRef<HTMLDivElement>(null);
   const chars = "云宝生日快乐!".split("");
 
-  useGSAP(() => {
-    if (titleRef.current) {
-      gsap.from(titleRef.current.querySelectorAll(".char"), {
-        opacity: 0,
-        y: 50,
-        stagger: 0.08,
-        duration: 0.6,
-        ease: "back.out(1.7)",
-      });
-    }
-  }, { scope: titleRef });
+  useGSAP(
+    () => {
+      if (titleRef.current) {
+        gsap.from(titleRef.current.querySelectorAll(".char"), {
+          opacity: 0,
+          y: 50,
+          stagger: 0.08,
+          duration: 0.6,
+          ease: "back.out(1.7)",
+        });
+      }
+    },
+    { scope: titleRef },
+  );
 
   // Confetti pieces
   const confettiPieces = useMemo(() => {
-    const confettiColors = ["#ff0000", "#00ff00", "#0000ff", "#ffff00", "#ff00ff", "#00ffff", "#ffd700"];
+    const confettiColors = [
+      "#ff0000",
+      "#00ff00",
+      "#0000ff",
+      "#ffff00",
+      "#ff00ff",
+      "#00ffff",
+      "#ffd700",
+    ];
     return Array.from({ length: 50 }, (_, i) => ({
       id: i,
       color: confettiColors[i % confettiColors.length],
@@ -52,16 +66,28 @@ export default function VictoryScreen({ score, onRestart }: VictoryScreenProps) 
         <motion.div
           key={piece.id}
           className="absolute w-2 h-4 rounded-sm"
-          style={{ backgroundColor: piece.color, left: `${piece.x}%`, top: "-5%" }}
+          style={{
+            backgroundColor: piece.color,
+            left: `${piece.x}%`,
+            top: "-5%",
+          }}
           animate={{ y: "110vh", rotate: 720, opacity: [1, 1, 0] }}
-          transition={{ duration: piece.duration, delay: piece.delay, repeat: Infinity, ease: "linear" }}
+          transition={{
+            duration: piece.duration,
+            delay: piece.delay,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "linear",
+          }}
         />
       ))}
 
       {/* Title */}
-      <div ref={titleRef} className="text-5xl md:text-7xl font-bold text-white mb-8 flex">
-        {chars.map((char, i) => (
-          <span key={i} className="char inline-block">
+      <div
+        ref={titleRef}
+        className="text-5xl md:text-7xl font-bold text-white mb-8 flex"
+      >
+        {chars.map((char) => (
+          <span key={char} className="char inline-block">
             {char}
           </span>
         ))}
