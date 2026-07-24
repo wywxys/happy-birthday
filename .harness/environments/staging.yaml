@@ -1,0 +1,18 @@
+environment:
+  name: Staging
+  identifier: staging
+  orgIdentifier: default
+  projectIdentifier: default_project
+  type: PreProduction
+  tags:
+    tier: staging
+  variables:
+    - name: domain
+      type: String
+      value: staging.myapp.com
+    - name: replicas
+      type: String
+      value: "2"
+    - name: db_password
+      type: Secret
+      value: <+secrets.getValue("staging_db_password")>

@@ -1,0 +1,18 @@
+environment:
+  name: Production
+  identifier: production
+  orgIdentifier: default
+  projectIdentifier: default_project
+  type: Production
+  tags:
+    tier: production
+  variables:
+    - name: domain
+      type: String
+      value: myapp.com
+    - name: replicas
+      type: String
+      value: "3"
+    - name: db_password
+      type: Secret
+      value: <+secrets.getValue("production_db_password")>

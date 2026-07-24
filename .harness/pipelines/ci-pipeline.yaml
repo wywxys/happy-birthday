@@ -1,0 +1,121 @@
+pipeline:
+  name: NextJS CI Pipeline
+  identifier: nextjs_ci_pipeline
+  orgIdentifier: default
+  projectIdentifier: default_project
+  stages:
+    - stage:
+        name: Lint
+        identifier: Lint
+        type: CI
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+          buildIntelligence:
+            enabled: true
+          execution:
+            steps:
+              - step:
+                  name: Install and Lint
+                  identifier: install_and_lint
+                  type: Run
+                  spec:
+                    shell: Sh
+                    command: |
+                      bun install --frozen-lockfile
+                      bun run lint
+    - stage:
+        name: TypeCheck
+        identifier: TypeCheck
+        type: CI
+        dependsOn:
+          - Lint
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+          buildIntelligence:
+            enabled: true
+          # Matrix strategy example (Node 20/22):
+          # strategy:
+          #   matrix:
+          #     node: [20, 22]
+          #   maxConcurrency: 2
+          execution:
+            steps:
+              - step:
+                  name: Install and TypeCheck
+                  identifier: install_and_typecheck
+                  type: Run
+                  spec:
+                    shell: Sh
+                    command: |
+                      bun install --frozen-lockfile
+                      bun run typecheck
+    - stage:
+        name: Build
+        identifier: Build
+        type: CI
+        dependsOn:
+          - Lint
+          - TypeCheck
+        spec:
+          cloneCodebase: true
+          platform:
+            os: Linux
+            arch: Amd64
+          runtime:
+            type: Cloud
+            spec: {}
+          caching:
+            enabled: true
+          buildIntelligence:
+            enabled: true
+          execution:
+            steps:
+              - step:
+                  name: Install and Build
+                  identifier: install_and_build
+                  type: Run
+                  spec:
+                    shell: Sh
+                    command: |
+                      bun install --frozen-lockfile
+                      bun run build
+    # Unit test stage placeholder: add @playwright/test for e2e in future iteration
+    # - stage:
+    #     name: UnitTest
+    #     identifier: UnitTest
+    #     type: CI
+    #     dependsOn:
+    #       - Build
+    #     spec:
+    #       cloneCodebase: true
+    #       platform:
+    #         os: Linux
+    #         arch: Amd64
+    #       runtime:
+    #         type: Cloud
+    #         spec: {}
+    #       execution:
+    #         steps:
+    #           - step:
+    #               name: Run Tests
+    #               identifier: run_tests
+    #               type: Run
+    #               spec:
+    #                 shell: Sh
+    #                 command: bun test

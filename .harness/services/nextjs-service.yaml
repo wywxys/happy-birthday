@@ -1,0 +1,39 @@
+service:
+  name: NextJS Service
+  identifier: nextjs_service
+  orgIdentifier: default
+  projectIdentifier: default_project
+  serviceDefinition:
+    type: Kubernetes
+    spec:
+      artifacts:
+        primary:
+          primaryArtifactRef: nextjs_image
+          sources:
+            - identifier: nextjs_image
+              type: DockerRegistry
+              spec:
+                connectorRef: YOUR_DOCKER_CONNECTOR
+                imagePath: library/nextjs-app
+                tag: <+input>
+      manifests:
+        - manifest:
+            identifier: k8s_manifest
+            type: K8sManifest
+            spec:
+              store:
+                type: Github
+                spec:
+                  connectorRef: YOUR_GITHUB_CONNECTOR
+                  repoName: happy-birthday
+                  branch: main
+                  paths:
+                    - k8s/
+              skipResourceVersioning: false
+      variables:
+        - name: replicas
+          type: String
+          value: "2"
+        - name: port
+          type: String
+          value: "3000"

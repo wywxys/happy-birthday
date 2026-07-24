@@ -1,0 +1,94 @@
+pipeline:
+  name: NextJS CD Pipeline
+  identifier: nextjs_cd_pipeline
+  orgIdentifier: default
+  projectIdentifier: default_project
+  stages:
+    - stage:
+        name: Deploy Staging
+        identifier: DeployStaging
+        type: Deployment
+        spec:
+          serviceConfig:
+            serviceRef: nextjs_service
+            serviceDefinition:
+              type: Kubernetes
+              spec:
+                variables: []
+          infrastructure:
+            environmentRef: staging
+            infrastructureDefinition:
+              type: KubernetesDirect
+              spec:
+                connectorRef: YOUR_K8S_CONNECTOR
+                namespace: staging
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+            rollbackSteps:
+              - step:
+                  name: Rollback Deployment
+                  identifier: rollbackDeployment
+                  type: K8sRollingRollback
+                  spec:
+                    pruningEnabled: false
+    - stage:
+        name: Approval
+        identifier: Approval
+        type: Approval
+        spec:
+          execution:
+            steps:
+              - step:
+                  name: Production Approval
+                  identifier: productionApproval
+                  type: HarnessApproval
+                  spec:
+                    approvalMessage: Please approve deployment to production
+                    includePipelineExecutionHistory: true
+                    approvers:
+                      userGroups:
+                        - admin_group
+                    timeout: 1d
+    - stage:
+        name: Deploy Production
+        identifier: DeployProduction
+        type: Deployment
+        dependsOn:
+          - Approval
+        spec:
+          serviceConfig:
+            serviceRef: nextjs_service
+            serviceDefinition:
+              type: Kubernetes
+              spec:
+                variables: []
+          infrastructure:
+            environmentRef: production
+            infrastructureDefinition:
+              type: KubernetesDirect
+              spec:
+                connectorRef: YOUR_K8S_CONNECTOR
+                namespace: production
+          execution:
+            steps:
+              - step:
+                  name: Rollout Deployment
+                  identifier: rolloutDeployment
+                  type: K8sRollingDeploy
+                  spec:
+                    skipDryRun: false
+                    pruningEnabled: false
+            rollbackSteps:
+              - step:
+                  name: Rollback Deployment
+                  identifier: rollbackDeployment
+                  type: K8sRollingRollback
+                  spec:
+                    pruningEnabled: false
