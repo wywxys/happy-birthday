@@ -246,7 +246,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Smooth parallax visible during gameplay; sky gradient transitions nicely; player renders above background. Failure: Seams visible → check tileSprite wrap settings; wrong depth → adjust setDepth values. Evidence .omo/evidence/task-11-happy-birthday-upgrade.txt
   Commit: Y | feat(game): parallax scrolling background with gradient sky and cloud layers
 
-- [ ] 12. Make game fully responsive (mobile + desktop) with Phaser Scale Manager
+- [x] 12. Make game fully responsive (mobile + desktop) with Phaser Scale Manager
   What to do: Configure Phaser Scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH, width: 800, height: 600 }. This scales the canvas to fit any viewport while maintaining aspect ratio. Use relative coordinates in all game objects (percentage of this.scale.width/height, not absolute pixels). Add touch input support (this.input.on('pointerdown') already works for touch). Add meta viewport tag in layout.tsx. Test at 375×667 (iPhone SE), 390×844 (iPhone 14), 1920×1080 (desktop). Add landscape lock hint (show "rotate device" overlay if width < height on mobile).
   Must NOT do: Do not hardcode any pixel positions (all relative to scale.width/height). Do not break desktop experience for mobile optimization.
   Parallelization: Wave 4 | Blocked by: 10,11 | Blocks: 14
@@ -264,7 +264,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Click through all 10 dialogs; animations play correctly; skip jumps to game. Failure: AnimatePresence not triggering exit → check key prop. Evidence .omo/evidence/task-13-happy-birthday-upgrade.txt
   Commit: Y | feat(ui): conversation overlay with Framer Motion animations
 
-- [ ] 14. Birthday finale: victory screen with animated birthday message + confetti
+- [x] 14. Birthday finale: victory screen with animated birthday message + confetti
   What to do: After player reaches score milestone (e.g., 20 cakes eaten — adjustable, see note): trigger victory state. Show full-screen React overlay with: "云宝生日快乐!" in large animated text (manual character-split into <span> elements + GSAP stagger animation via @gsap/react useGSAP — NOT SplitText plugin which is paid). Pattern:
     ```tsx
     const chars = "云宝生日快乐!".split('')
@@ -280,7 +280,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Score 20 → victory screen with animations → restart works → score resets. Failure: Victory not triggering → check EventBus score threshold; GSAP error → verify no SplitText import. Evidence .omo/evidence/task-14-happy-birthday-upgrade.txt
   Commit: Y | feat(ui): birthday victory screen with animated text and confetti
 
-- [ ] 15. Write HARNESS.md comprehensive deployment plan document
+- [x] 15. Write HARNESS.md comprehensive deployment plan document
   What to do: Create HARNESS.md at project root — a human-readable deployment plan document covering: (1) Architecture overview (Next.js 16 App Router + Phaser 4 game), (2) Pipeline architecture diagram (ASCII DAG), (3) Environment strategy (staging → production), (4) CI stages explained (lint with Biome, type-check, build, container push), (5) CD stages explained (K8s rolling deploy + rollback), (6) Quality gates (type-check + build + optional Playwright), (7) Feature flag strategy for birthday themes, (8) Monitoring/alerting recommendations, (9) Harness AI and Worker Agents usage recommendations, (10) Connector and secret requirements table. Reference the .harness/ YAML files created in Todo 3.
   Must NOT do: Do not include real secrets. Do not require Harness account to understand the document. Keep it actionable for a team that hasn't used Harness before.
   Parallelization: Wave 6 | Blocked by: 3 | Blocks: 16
