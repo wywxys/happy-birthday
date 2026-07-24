@@ -48,5 +48,4 @@ ehthumbs.db
 Desktop.ini
 
 # omo
-.omo/evidence/
-.omo/run-continuation/
+.omo/
