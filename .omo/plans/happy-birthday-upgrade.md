@@ -300,10 +300,10 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
 
 ## Final verification wave
 > Runs in parallel after ALL todos. ALL must APPROVE. Surface results and wait for the user's explicit okay before declaring complete.
-- [ ] F1. Plan compliance audit — Verify every todo's acceptance criteria was met; all commits exist; .omo/evidence/ files present for each task.
-- [ ] F2. Code quality review — `bunx biome check .` passes; `tsc --noEmit` passes; no `any` types; no `console.log`; no dead imports; all components have proper types.
-- [ ] F3. Agent-executed QA — Start `bun run dev`, use Playwright (or agent-browser) to: navigate to localhost:3000, verify canvas element renders, click through conversation overlay (verify 10 dialogs), click to start game, verify score element appears, verify game-over triggers on missed cake, verify restart button works, verify responsive at 375px viewport width. All assertions are automated — no human play-testing required.
-- [ ] F4. Scope fidelity — Confirm: .gitignore populated (>20 active entries), Next.js 16 (check `node_modules/next/package.json` version field starts with "16.2"), Phaser 4 used (check `node_modules/phaser/package.json` version starts with "4"), all 24 original bugs absent (no setInterval in game code, no document.querySelector, no let game state), Harness docs present (.harness/ + HARNESS.md), bun used (`bun.lock` exists, no package-lock.json), original 杉/云 story preserved (conversation text intact), EventBus uses Phaser.Events.EventEmitter (no Node `events` import).
+- [x] F1. Plan compliance audit — Verify every todo's acceptance criteria was met; all commits exist; .omo/evidence/ files present for each task.
+- [x] F2. Code quality review — `bunx biome check .` passes; `tsc --noEmit` passes; no `any` types; no `console.log`; no dead imports; all components have proper types.
+- [x] F3. Agent-executed QA — Start `bun run dev`, use Playwright (or agent-browser) to: navigate to localhost:3000, verify canvas element renders, click through conversation overlay (verify 10 dialogs), click to start game, verify score element appears, verify game-over triggers on missed cake, verify restart button works, verify responsive at 375px viewport width. All assertions are automated — no human play-testing required.
+- [x] F4. Scope fidelity — Confirm: .gitignore populated (>20 active entries), Next.js 16 (check `node_modules/next/package.json` version field starts with "16.2"), Phaser 4 used (check `node_modules/phaser/package.json` version starts with "4"), all 24 original bugs absent (no setInterval in game code, no document.querySelector, no let game state), Harness docs present (.harness/ + HARNESS.md), bun used (`bun.lock` exists, no package-lock.json), original 杉/云 story preserved (conversation text intact), EventBus uses Phaser.Events.EventEmitter (no Node `events` import).
 
 ## Commit strategy
 - Atomic commits per todo (16 total commits)
