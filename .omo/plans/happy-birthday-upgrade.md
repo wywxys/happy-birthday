@@ -188,7 +188,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Cakes appear every ~1.5s, move left, disappear. Failure: Cakes pile up → check destroy/cleanup logic. Evidence .omo/evidence/task-6-happy-birthday-upgrade.txt
   Commit: Y | feat(game): cake obstacle spawning with physics group and auto-cleanup
 
-- [ ] 7. Implement collision detection and score system
+- [x] 7. Implement collision detection and score system
   What to do: Use Phaser overlap detection: this.physics.add.overlap(bird, cakeGroup, eatCake). On overlap: destroy cake, increment score, emit "score-update" via EventBus, trigger brief particle burst (prep for Todo 10). Use Phaser overlap (not collider) for "eating" mechanic.
   For "miss" detection (CRITICAL — race condition guard): In update(), iterate cakeGroup.getChildren() and for each cake:
     ```typescript
@@ -206,7 +206,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Eat 3 cakes → score shows 3; miss 1 cake → game over; eat cake at last possible moment (bird.x boundary) → no false game-over. Failure: Overlap not detecting → check body sizes and physics config; false game-over on eat → verify cake.active guard. Evidence .omo/evidence/task-7-happy-birthday-upgrade.txt
   Commit: Y | feat(game): AABB collision detection with race-safe miss guard and EventBus score
 
-- [ ] 8. Implement game state machine: Start → Playing → GameOver → Victory → Restart
+- [x] 8. Implement game state machine: Start → Playing → GameOver → Victory → Restart
   What to do: Add game states enum: `enum GameState { IDLE, PLAYING, GAME_OVER, VICTORY }`. IDLE: show "点击开始" text in Phaser (or React overlay); bird visible but no gravity; no cakes. PLAYING: gravity active, cakes spawn, score counts. GAME_OVER: freeze physics (this.physics.pause()), stop cake timer, emit "game-over" to EventBus with final score. VICTORY: triggered when score >= 20 (victoryThreshold); freeze physics, stop cake timer, emit "victory" to EventBus with final score and time survived — this is DISTINCT from GAME_OVER and must be checked BEFORE the difficulty bump at score 20. RESTART: this.scene.restart() — resets all scene state cleanly (score, difficulty, state → IDLE). EventBus: emit 'game-state-change' with state. React overlay: show start/gameover/victory screens based on state.
   NOTE: VICTORY state is essential for Todo 14 (birthday finale). The score check in eatCake callback must be: `if (this.score >= this.victoryThreshold) { this.victory(); return; }` BEFORE applying difficulty bump. This prevents a difficulty increase firing at the same frame as victory.
   Must NOT do: Do not use mutable let variables for state (use Phaser scene properties). Do not leave intervals/timers running after game over OR victory. Do not require page reload to restart. Do not forget VICTORY state (Todo 14 depends on it). Do not apply difficulty bump at victoryThreshold score.
@@ -216,7 +216,7 @@ Your next move: approve this plan to begin execution. The high-accuracy dual rev
   QA scenarios: Happy: Start→play→die→restart→play again (score resets); Start→play→score 20→VICTORY event fires (not GAME_OVER). Failure: Score persists after restart → check scene.restart() scope; victory not firing → check score >= threshold before difficulty bump. Evidence .omo/evidence/task-8-happy-birthday-upgrade.txt
   Commit: Y | feat(game): state machine with IDLE/PLAYING/GAME_OVER/VICTORY and clean restart
 
-- [ ] 9. Add difficulty progression (speed + spawn rate increase over time)
+- [x] 9. Add difficulty progression (speed + spawn rate increase over time)
   What to do: Track score milestones. Every 5 cakes eaten: increase cake velocity by 20 (from -200 base), decrease spawn interval by 100ms (from 1500ms base, minimum 800ms). Cap maximum difficulty. Show brief visual feedback in React UI when difficulty increases (subtle pulse on score, no intrusive "LEVEL UP" flash). Store difficulty params in scene data for restart reset.
   CRITICAL: The difficulty bump check MUST happen AFTER the victory check in the eatCake callback. Order in eatCake: (1) increment score, (2) check score >= victoryThreshold → if yes, call this.victory() and RETURN, (3) THEN check score % 5 === 0 → apply difficulty bump. This prevents a difficulty bump firing at score 20 (the victory threshold) which would be immediately irrelevant.
   NOTE: Difficulty progression is a NEW feature not present in the original game (which had fixed speed/rate). This is adopted as a best-practice default for engaging gameplay.
