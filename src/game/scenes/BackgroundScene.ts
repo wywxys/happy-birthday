@@ -26,7 +26,7 @@ export class BackgroundScene extends Phaser.Scene {
         skyCanvas.refresh();
       }
     }
-    this.add.image(width / 2, height / 2, skyKey);
+    this.add.image(width / 2, height / 2, skyKey).setDepth(-10);
 
     const farKey = "clouds-far";
     if (!this.textures.exists(farKey)) {
@@ -41,16 +41,17 @@ export class BackgroundScene extends Phaser.Scene {
     }
     this.cloudsFar = this.add.tileSprite(
       width / 2,
-      height * 0.2,
+      height * 0.12,
       width,
       80,
       farKey,
     );
+    this.cloudsFar.setDepth(-8);
 
     const midKey = "clouds-mid";
     if (!this.textures.exists(midKey)) {
       const gfx = this.make.graphics({ x: 0, y: 0 });
-      gfx.fillStyle(0xffffff, 0.5);
+      gfx.fillStyle(0xffffff, 0.35);
       gfx.fillEllipse(60, 35, 100, 50);
       gfx.fillEllipse(200, 40, 120, 60);
       gfx.fillEllipse(350, 30, 80, 40);
@@ -59,11 +60,12 @@ export class BackgroundScene extends Phaser.Scene {
     }
     this.cloudsMid = this.add.tileSprite(
       width / 2,
-      height * 0.4,
+      height * 0.28,
       width,
       80,
       midKey,
     );
+    this.cloudsMid.setDepth(-7);
 
     const groundKey = "ground-tile";
     const groundH = Math.floor(height * 0.15);
@@ -83,6 +85,7 @@ export class BackgroundScene extends Phaser.Scene {
       groundH,
       groundKey,
     );
+    this.ground.setDepth(-5);
   }
 
   update(_time: number, delta: number): void {

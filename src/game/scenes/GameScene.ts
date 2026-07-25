@@ -4,16 +4,16 @@ import { EventBus, GameEvents } from "../EventBus";
 const BIRD_TEXTURE_KEY = "bird";
 const BIRD_GRAVITY_Y = 800;
 const BIRD_JUMP_VELOCITY_Y = -350;
-const BIRD_DISPLAY_WIDTH = 60;
-const BIRD_DISPLAY_HEIGHT = 45;
-const BIRD_BODY_WIDTH = 50;
-const BIRD_BODY_HEIGHT = 35;
+const BIRD_DISPLAY_WIDTH = 90;
+const BIRD_DISPLAY_HEIGHT = 68;
+const BIRD_BODY_WIDTH = 70;
+const BIRD_BODY_HEIGHT = 50;
 const CAKE_TEXTURE_KEY = "cake";
 const STAR_PARTICLE_TEXTURE_KEY = "star-particle";
 const FEATHER_PARTICLE_TEXTURE_KEY = "feather-particle";
 const CONFETTI_PARTICLE_TEXTURE_KEY = "confetti-particle";
-const CAKE_DISPLAY_SIZE = 50;
-const CAKE_BODY_SIZE = 40;
+const CAKE_DISPLAY_SIZE = 60;
+const CAKE_BODY_SIZE = 48;
 const CAKE_OFFSCREEN_X = -60;
 
 enum GameState {
@@ -60,12 +60,23 @@ export class GameScene extends Phaser.Scene {
     this.physics.resume();
     this.generateParticleTextures();
 
-    const x = this.scale.width * 0.1;
+    // Bring GameScene to the top so it renders above BackgroundScene
+    this.scene.bringToTop();
+
+    const x = this.scale.width * 0.15;
     const y = this.scale.height * 0.5;
     const bird = this.physics.add.sprite(x, y, BIRD_TEXTURE_KEY);
 
     bird.setDisplaySize(BIRD_DISPLAY_WIDTH, BIRD_DISPLAY_HEIGHT);
-    bird.body.setSize(BIRD_BODY_WIDTH, BIRD_BODY_HEIGHT);
+    // Body size must be set in TEXTURE pixels (before display scaling).
+    // The cloud.png texture is much larger than the display size, so we
+    // scale the body to match the visible sprite.
+    const scaleX = bird.scaleX;
+    const scaleY = bird.scaleY;
+    bird.body.setSize(BIRD_BODY_WIDTH / scaleX, BIRD_BODY_HEIGHT / scaleY);
+    // Tint the bird pink so it's visually distinct from the background clouds
+    bird.setTint(0xffb6c1);
+    bird.setDepth(10);
     bird.setCollideWorldBounds(true);
     bird.body.setGravityY(0);
     bird.body.onWorldBounds = true;
@@ -103,10 +114,14 @@ export class GameScene extends Phaser.Scene {
 
     this.startText = this.add
       .text(this.scale.width / 2, this.scale.height * 0.3, "点击屏幕开始", {
-        fontSize: "24px",
+        fontSize: "28px",
         color: "#ffffff",
+        fontStyle: "bold",
+        stroke: "#000000",
+        strokeThickness: 4,
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5)
+      .setDepth(20);
 
     EventBus.off("restart-game", this.restartGame, this);
     EventBus.on("restart-game", this.restartGame, this);
@@ -243,7 +258,9 @@ export class GameScene extends Phaser.Scene {
       CAKE_TEXTURE_KEY,
     ) as Phaser.Types.Physics.Arcade.SpriteWithDynamicBody;
     cake.setDisplaySize(CAKE_DISPLAY_SIZE, CAKE_DISPLAY_SIZE);
-    cake.body.setSize(CAKE_BODY_SIZE, CAKE_BODY_SIZE);
+    // Scale hitbox to match visible display size (texture is much larger)
+    cake.body.setSize(CAKE_BODY_SIZE / cake.scaleX, CAKE_BODY_SIZE / cake.scaleY);
+    cake.setDepth(9);
     cake.setVelocityX(-this.currentSpeed);
     cake.setData("passed", false);
 
