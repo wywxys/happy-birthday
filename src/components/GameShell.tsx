@@ -8,6 +8,7 @@ import { gameReducer, initialGameState } from "../game/gameReducer";
 import { createCake } from "../game/spawner";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { usePersistedNumber } from "../hooks/usePersisted";
+import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useSoundEffects } from "../hooks/useSoundEffect";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
@@ -39,6 +40,7 @@ const promptStyle = { textShadow: "2px 2px 6px rgba(0,0,0,0.6)" };
 export default function GameShell() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const stateRef = useRef(state);
+  const reducedMotion = useReducedMotion();
   const sfx = useSoundEffects();
   const sfxRef = useRef(sfx);
   useEffect(() => {
@@ -65,6 +67,7 @@ export default function GameShell() {
   const [inHitstop, setInHitstop] = useState(false);
 
   useEffect(() => {
+    if (reducedMotion) return;
     if (state.lastMissedAt !== null && viewportRef.current) {
       const el = viewportRef.current;
       el.classList.remove("shake");
@@ -76,10 +79,11 @@ export default function GameShell() {
       );
       return () => clearTimeout(t);
     }
-  }, [state.lastMissedAt]);
+  }, [state.lastMissedAt, reducedMotion]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
   useEffect(() => {
+    if (reducedMotion) return;
     const le = state.lastEatenCake;
     if (le) {
       burst(
@@ -116,6 +120,7 @@ export default function GameShell() {
   // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
   useEffect(() => {
     if (state.lastEatenCake) {
+      if (reducedMotion) return;
       hitstopUntilRef.current = performance.now() + constants.HITSTOP_MS;
       setInHitstop(true);
       const t = setTimeout(() => setInHitstop(false), constants.HITSTOP_MS);
@@ -286,6 +291,7 @@ export default function GameShell() {
           <ScorePop
             pops={pops}
             onDone={(id) => setPops((p) => p.filter((x) => x.id !== id))}
+            reducedMotion={reducedMotion}
           />
           <ParticleBurst containerRef={particleContainerRef} />
           {state.phase === "ready" && (
@@ -302,7 +308,10 @@ export default function GameShell() {
             </div>
           )}
         </div>
-        <MilestoneFlash cakesEaten={state.cakesEaten} />
+        <MilestoneFlash
+          cakesEaten={state.cakesEaten}
+          reducedMotion={reducedMotion}
+        />
         {hudVisible && (
           <div className="absolute top-4 left-4 px-4 py-2 rounded-full bg-black/50 text-white font-bold text-xl backdrop-blur-sm shadow-lg z-10">
             🎂{" "}
@@ -311,7 +320,7 @@ export default function GameShell() {
               className="inline-block"
               initial={{ scale: 1.4 }}
               animate={{ scale: 1 }}
-              transition={{ duration: 0.25 }}
+              transition={{ duration: reducedMotion ? 0 : 0.25 }}
             >
               {state.score}
             </motion.span>{" "}
@@ -345,6 +354,11 @@ export default function GameShell() {
           <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
             <h2 className="text-white text-5xl mb-4">已暂停</h2>
             <p className="text-white/80">按 P 或点击 ⏸ 继续</p>
+          </div>
+        )}
+        {reducedMotion && (
+          <div className="absolute bottom-4 left-4 z-10 px-2 py-1 text-xs rounded bg-white/20 text-white">
+            极简动效已启用
           </div>
         )}
       </div>
