@@ -224,6 +224,17 @@ export default function GameShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [handleClick]);
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "p" || e.key === "P") {
+        if (state.phase === "playing") dispatch({ type: "PAUSE" });
+        else if (state.phase === "paused") dispatch({ type: "RESUME" });
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [state.phase]);
+
   return (
     <div
       className="w-screen h-screen bg-neutral-900 overflow-hidden relative flex items-center justify-center select-none"
@@ -317,6 +328,25 @@ export default function GameShell() {
         >
           {sfx.muted ? "🔇" : "🔊"}
         </button>
+        {(state.phase === "playing" || state.phase === "paused") && (
+          <button
+            type="button"
+            className="absolute top-4 right-28 z-10 px-3 py-2 rounded-full bg-black/40 text-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (state.phase === "playing") dispatch({ type: "PAUSE" });
+              else if (state.phase === "paused") dispatch({ type: "RESUME" });
+            }}
+          >
+            {state.phase === "paused" ? "▶" : "⏸"}
+          </button>
+        )}
+        {state.phase === "paused" && (
+          <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-none">
+            <h2 className="text-white text-5xl mb-4">已暂停</h2>
+            <p className="text-white/80">按 P 或点击 ⏸ 继续</p>
+          </div>
+        )}
       </div>
       {state.phase === "intro" && (
         <ConversationOverlay
