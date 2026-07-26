@@ -9,14 +9,19 @@ gsap.registerPlugin(useGSAP);
 
 interface VictoryScreenProps {
   score: number;
+  best: number;
+  isNewBest: boolean;
   onRestart: () => void;
 }
 
 export default function VictoryScreen({
   score,
+  best,
+  isNewBest,
   onRestart,
 }: VictoryScreenProps) {
   const titleRef = useRef<HTMLDivElement>(null);
+  const newBestRef = useRef<HTMLSpanElement>(null);
   const chars = "云宝生日快乐!".split("");
 
   useGSAP(
@@ -33,6 +38,17 @@ export default function VictoryScreen({
     },
     { scope: titleRef },
   );
+
+  useGSAP(() => {
+    if (isNewBest && newBestRef.current) {
+      gsap.from(newBestRef.current, {
+        scale: 0,
+        opacity: 0,
+        duration: 0.5,
+        ease: "back.out(1.7)",
+      });
+    }
+  }, [isNewBest]);
 
   // Confetti pieces
   const confettiPieces = useMemo(() => {
@@ -96,6 +112,12 @@ export default function VictoryScreen({
       {/* Stats */}
       <div className="text-white/80 text-xl mb-8 text-center">
         <p>得分: {score} 🎂</p>
+      </div>
+
+      {/* Best score */}
+      <div className="mb-6 text-2xl text-white">
+        最佳: {best} 🎂{" "}
+        {isNewBest && <span ref={newBestRef}>· 🏆 NEW BEST!</span>}
       </div>
 
       {/* Restart button */}

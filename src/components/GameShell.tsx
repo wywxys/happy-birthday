@@ -7,6 +7,7 @@ import * as constants from "../game/constants";
 import { gameReducer, initialGameState } from "../game/gameReducer";
 import { createCake } from "../game/spawner";
 import { useGameLoop } from "../hooks/useGameLoop";
+import { usePersistedNumber } from "../hooks/usePersisted";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
 import MilestoneFlash from "./effects/MilestoneFlash";
@@ -47,6 +48,12 @@ const promptStyle = { textShadow: "2px 2px 6px rgba(0,0,0,0.6)" };
 export default function GameShell() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const stateRef = useRef(state);
+  const [best, setBest] = usePersistedNumber(
+    constants.BEST_SCORE_STORAGE_KEY,
+    0,
+  );
+  const isNewBestRef = useRef(false);
+  const [isNewBest, setIsNewBest] = useState(false);
   const hudVisible =
     state.phase === "playing" ||
     state.phase === "gameover" ||
@@ -165,6 +172,17 @@ export default function GameShell() {
 
   const handleRestart = useCallback(() => dispatch({ type: "RESET" }), []);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: evaluate once per terminal phase transition using pre-write best
+  useEffect(() => {
+    if (state.phase === "gameover" || state.phase === "victory") {
+      isNewBestRef.current = state.score > best && state.score > 0;
+      if (isNewBestRef.current) setBest(state.score);
+    } else {
+      isNewBestRef.current = false;
+    }
+    setIsNewBest(isNewBestRef.current);
+  }, [state.phase]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === " " || e.key === "Enter") {
@@ -279,6 +297,18 @@ export default function GameShell() {
           <p className="text-white/80 text-xl mb-8">
             最终得分: {state.score} 🎂
           </p>
+          <p className="text-white/80 text-lg mb-4">
+            最佳: {best} 🎂{" "}
+            {isNewBest && (
+              <motion.span
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 400, damping: 15 }}
+              >
+                · 🏆 NEW BEST!
+              </motion.span>
+            )}
+          </p>
           <motion.button
             onClick={handleRestart}
             className="px-8 py-4 bg-gradient-to-r from-red-500 to-orange-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
@@ -290,7 +320,12 @@ export default function GameShell() {
         </motion.div>
       )}
       {state.phase === "victory" && (
-        <VictoryScreen score={state.score} onRestart={handleRestart} />
+        <VictoryScreen
+          score={state.score}
+          best={best}
+          isNewBest={isNewBest}
+          onRestart={handleRestart}
+        />
       )}
       <div className="hidden" aria-hidden>
         <Image src="/cloud.png" alt="" width={60} height={45} priority />
