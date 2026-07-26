@@ -8,21 +8,12 @@ import { gameReducer, initialGameState } from "../game/gameReducer";
 import { createCake } from "../game/spawner";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { usePersistedNumber } from "../hooks/usePersisted";
+import { useSoundEffects } from "../hooks/useSoundEffect";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
 import MilestoneFlash from "./effects/MilestoneFlash";
 import { ParticleBurst, burst } from "./effects/ParticleBurst";
 import ScorePop from "./effects/ScorePop";
-
-const sfxStub: SfxApi = {
-  jump: () => {},
-  eat: () => {},
-  gameover: () => {},
-  victory: () => {},
-  setMuted: () => {},
-  muted: false,
-  playCount: 0,
-};
 
 const viewportStyle = {
   width: `min(100vw, ${constants.WORLD_WIDTH / constants.WORLD_HEIGHT} * 100vh)`,
@@ -48,6 +39,11 @@ const promptStyle = { textShadow: "2px 2px 6px rgba(0,0,0,0.6)" };
 export default function GameShell() {
   const [state, dispatch] = useReducer(gameReducer, initialGameState);
   const stateRef = useRef(state);
+  const sfx = useSoundEffects();
+  const sfxRef = useRef(sfx);
+  useEffect(() => {
+    sfxRef.current = sfx;
+  });
   const [best, setBest] = usePersistedNumber(
     constants.BEST_SCORE_STORAGE_KEY,
     0,
@@ -127,6 +123,16 @@ export default function GameShell() {
     }
   }, [state.lastEatenCake?.id]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: fire per eat
+  useEffect(() => {
+    if (state.lastEatenCake) sfx.eat(state.lastEatenCake.kind);
+  }, [state.lastEatenCake?.id]);
+
+  useEffect(() => {
+    if (state.phase === "gameover") sfx.gameover();
+    else if (state.phase === "victory") sfx.victory();
+  }, [state.phase, sfx.gameover, sfx.victory]);
+
   useGameLoop(
     (dt) => dispatch({ type: "TICK", dt }),
     state.phase === "playing" || state.phase === "paused",
@@ -156,7 +162,29 @@ export default function GameShell() {
           dispatch({ type: "SET_SCORE", score, cakesEaten }),
         forceGameover: () => dispatch({ type: "MISS" }),
         forceVictory: () => dispatch({ type: "VICTORY" }),
-        sfx: sfxStub,
+        sfx: {
+          get jump() {
+            return sfxRef.current.jump;
+          },
+          get eat() {
+            return sfxRef.current.eat;
+          },
+          get gameover() {
+            return sfxRef.current.gameover;
+          },
+          get victory() {
+            return sfxRef.current.victory;
+          },
+          get setMuted() {
+            return sfxRef.current.setMuted;
+          },
+          get muted() {
+            return sfxRef.current.muted;
+          },
+          get playCount() {
+            return sfxRef.current.playCount;
+          },
+        },
       };
       return () => {
         window.__gameDebug = undefined;
@@ -166,9 +194,11 @@ export default function GameShell() {
 
   const handleClick = useCallback(() => {
     if (state.phase === "ready") dispatch({ type: "START" });
-    else if (state.phase === "playing") dispatch({ type: "JUMP" });
-    else if (state.phase === "paused") dispatch({ type: "RESUME" });
-  }, [state.phase]);
+    else if (state.phase === "playing") {
+      sfx.jump();
+      dispatch({ type: "JUMP" });
+    } else if (state.phase === "paused") dispatch({ type: "RESUME" });
+  }, [state.phase, sfx]);
 
   const handleRestart = useCallback(() => dispatch({ type: "RESET" }), []);
 
@@ -277,6 +307,16 @@ export default function GameShell() {
             / {constants.VICTORY_SCORE}
           </div>
         )}
+        <button
+          type="button"
+          className="absolute top-4 right-16 z-10 px-3 py-2 rounded-full bg-black/40 text-white"
+          onClick={(e) => {
+            e.stopPropagation();
+            sfx.setMuted(!sfx.muted);
+          }}
+        >
+          {sfx.muted ? "🔇" : "🔊"}
+        </button>
       </div>
       {state.phase === "intro" && (
         <ConversationOverlay
