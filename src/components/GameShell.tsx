@@ -133,7 +133,7 @@ export default function GameShell() {
     if (state.phase !== "playing") return;
     const id = setInterval(() => {
       if (performance.now() < hitstopUntilRef.current) return;
-      dispatch({ type: "SPAWN_CAKE", cake: createCake() });
+      dispatch({ type: "SPAWN_CAKE", cake: createCake({ allowGolden: true }) });
     }, state.currentSpawnMs);
     return () => clearInterval(id);
   }, [state.phase, state.currentSpawnMs]);
@@ -207,7 +207,7 @@ export default function GameShell() {
           {state.cakes.map((c) => (
             <div
               key={c.id}
-              className="absolute"
+              className={`absolute${c.kind === "golden" ? " golden-cake" : ""}`}
               style={{
                 left: `${c.left}px`,
                 bottom: `${c.bottom}px`,
@@ -216,6 +216,10 @@ export default function GameShell() {
                 backgroundImage: "url(/cake.png)",
                 backgroundSize: "cover",
                 backgroundRepeat: "no-repeat",
+                filter:
+                  c.kind === "golden"
+                    ? "hue-rotate(45deg) saturate(2) brightness(1.1) drop-shadow(0 0 6px gold)"
+                    : undefined,
               }}
             />
           ))}

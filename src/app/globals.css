@@ -67,3 +67,16 @@ body {
 .shake {
   animation: shake 0.4s ease;
 }
+
+@keyframes gold-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+.golden-cake {
+  animation: gold-pulse 800ms ease-in-out infinite;
+}
