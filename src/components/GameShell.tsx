@@ -9,6 +9,7 @@ import { createCake } from "../game/spawner";
 import { useGameLoop } from "../hooks/useGameLoop";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
+import { ParticleBurst, burst } from "./effects/ParticleBurst";
 import ScorePop from "./effects/ScorePop";
 
 const sfxStub: SfxApi = {
@@ -53,6 +54,24 @@ export default function GameShell() {
   const [pops, setPops] = useState<
     { id: number; x: number; y: number; points: number; isGolden: boolean }[]
   >([]);
+
+  const particleContainerRef = useRef<HTMLDivElement>(null);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
+  useEffect(() => {
+    const le = state.lastEatenCake;
+    if (le) {
+      burst(
+        particleContainerRef.current,
+        le.x + constants.CAKE_WIDTH / 2,
+        le.y + constants.CAKE_HEIGHT / 2,
+        le.kind === "golden" ? 20 : 12,
+        le.kind === "golden"
+          ? ["#ffd700", "#fff8dc", "#ffe873"]
+          : ["#ffb6c1", "#ff69b4", "#ffffff"],
+      );
+    }
+  }, [state.lastEatenCake?.id]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
   useEffect(() => {
@@ -175,6 +194,7 @@ export default function GameShell() {
             pops={pops}
             onDone={(id) => setPops((p) => p.filter((x) => x.id !== id))}
           />
+          <ParticleBurst containerRef={particleContainerRef} />
           {state.phase === "ready" && (
             <div
               className="absolute left-0 right-0 flex justify-center"
