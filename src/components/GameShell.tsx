@@ -227,7 +227,17 @@ export default function GameShell() {
         </div>
         {hudVisible && (
           <div className="absolute top-4 left-4 px-4 py-2 rounded-full bg-black/50 text-white font-bold text-xl backdrop-blur-sm shadow-lg z-10">
-            🎂 {state.score} / {constants.VICTORY_SCORE}
+            🎂{" "}
+            <motion.span
+              key={state.score}
+              className="inline-block"
+              initial={{ scale: 1.4 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.25 }}
+            >
+              {state.score}
+            </motion.span>{" "}
+            / {constants.VICTORY_SCORE}
           </div>
         )}
       </div>
