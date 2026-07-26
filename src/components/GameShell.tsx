@@ -57,6 +57,8 @@ export default function GameShell() {
 
   const particleContainerRef = useRef<HTMLDivElement>(null);
   const viewportRef = useRef<HTMLDivElement>(null);
+  const hitstopUntilRef = useRef(0);
+  const [inHitstop, setInHitstop] = useState(false);
 
   useEffect(() => {
     if (state.lastMissedAt !== null && viewportRef.current) {
@@ -107,10 +109,20 @@ export default function GameShell() {
     }
   }, [state.lastEatenCake?.id]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
+  useEffect(() => {
+    if (state.lastEatenCake) {
+      hitstopUntilRef.current = performance.now() + constants.HITSTOP_MS;
+      setInHitstop(true);
+      const t = setTimeout(() => setInHitstop(false), constants.HITSTOP_MS);
+      return () => clearTimeout(t);
+    }
+  }, [state.lastEatenCake?.id]);
+
   useGameLoop(
     (dt) => dispatch({ type: "TICK", dt }),
     state.phase === "playing" || state.phase === "paused",
-    state.phase === "paused",
+    state.phase === "paused" || inHitstop,
   );
 
   useEffect(() => {
@@ -120,6 +132,7 @@ export default function GameShell() {
   useEffect(() => {
     if (state.phase !== "playing") return;
     const id = setInterval(() => {
+      if (performance.now() < hitstopUntilRef.current) return;
       dispatch({ type: "SPAWN_CAKE", cake: createCake() });
     }, state.currentSpawnMs);
     return () => clearInterval(id);
