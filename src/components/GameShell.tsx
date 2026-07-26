@@ -2,13 +2,14 @@
 
 import { motion } from "motion/react";
 import Image from "next/image";
-import { useCallback, useEffect, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import * as constants from "../game/constants";
 import { gameReducer, initialGameState } from "../game/gameReducer";
 import { createCake } from "../game/spawner";
 import { useGameLoop } from "../hooks/useGameLoop";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
+import ScorePop from "./effects/ScorePop";
 
 const sfxStub: SfxApi = {
   jump: () => {},
@@ -48,6 +49,29 @@ export default function GameShell() {
     state.phase === "playing" ||
     state.phase === "gameover" ||
     state.phase === "victory";
+
+  const [pops, setPops] = useState<
+    { id: number; x: number; y: number; points: number; isGolden: boolean }[]
+  >([]);
+
+  // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
+  useEffect(() => {
+    const le = state.lastEatenCake;
+    if (le) {
+      setPops((p) =>
+        [
+          ...p,
+          {
+            id: le.id,
+            x: le.x,
+            y: le.y,
+            points: le.points,
+            isGolden: le.kind === "golden",
+          },
+        ].slice(-20),
+      );
+    }
+  }, [state.lastEatenCake?.id]);
 
   useGameLoop(
     (dt) => dispatch({ type: "TICK", dt }),
@@ -147,6 +171,10 @@ export default function GameShell() {
               }}
             />
           ))}
+          <ScorePop
+            pops={pops}
+            onDone={(id) => setPops((p) => p.filter((x) => x.id !== id))}
+          />
           {state.phase === "ready" && (
             <div
               className="absolute left-0 right-0 flex justify-center"
