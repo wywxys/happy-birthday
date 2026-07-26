@@ -1,7 +1,10 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
-export function usePersistedNumber(key: string, initial: number): [number, (v: number) => void] {
+export function usePersistedNumber(
+  key: string,
+  initial: number,
+): [number, (v: number) => void] {
   const [value, setValue] = useState(initial);
   useEffect(() => {
     try {
@@ -14,13 +17,16 @@ export function usePersistedNumber(key: string, initial: number): [number, (v: n
       console.warn("usePersistedNumber read failed", e);
     }
   }, [key]);
-  const set = useCallback((v: number) => {
-    setValue(v);
-    try {
-      localStorage.setItem(key, String(v));
-    } catch (e) {
-      console.warn("usePersistedNumber write failed", e);
-    }
-  }, [key]);
+  const set = useCallback(
+    (v: number) => {
+      setValue(v);
+      try {
+        localStorage.setItem(key, String(v));
+      } catch (e) {
+        console.warn("usePersistedNumber write failed", e);
+      }
+    },
+    [key],
+  );
   return [value, set];
 }

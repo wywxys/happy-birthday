@@ -1,4 +1,10 @@
-import { GRAVITY_ACC, JUMP_VY, BIRD_MIN_BOTTOM, BIRD_MAX_BOTTOM, CAKE_WIDTH } from "./constants";
+import {
+  BIRD_MAX_BOTTOM,
+  BIRD_MIN_BOTTOM,
+  CAKE_WIDTH,
+  GRAVITY_ACC,
+  JUMP_VY,
+} from "./constants";
 import type { Cake } from "./types";
 
 export function applyGravity(

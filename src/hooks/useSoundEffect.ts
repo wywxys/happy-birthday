@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef } from "react";
-import { usePersistedNumber } from "./usePersisted";
 import { MUTED_STORAGE_KEY } from "../game/constants";
 import type { CakeKind } from "../game/types";
+import { usePersistedNumber } from "./usePersisted";
 
 export function useSoundEffects(): SfxApi {
   const [mutedNum, setMutedNum] = usePersistedNumber(MUTED_STORAGE_KEY, 0);

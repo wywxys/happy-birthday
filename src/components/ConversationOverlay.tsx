@@ -81,6 +81,7 @@ export default function ConversationOverlay({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={next}
+      // biome-ignore lint/a11y/useSemanticElements: motion.div is required for Framer Motion exit animation; keyboard access is handled by the document-level keydown listener (Enter/Space/Escape)
       role="button"
       tabIndex={0}
     >
@@ -106,6 +107,7 @@ export default function ConversationOverlay({
       </AnimatePresence>
 
       {/* Dialog card */}
+      {/* biome-ignore lint/a11y/useKeyWithClickEvents: overlay advance is keyboard-accessible via the document-level Enter/Space/Escape handler; adding onKeyDown here would double-advance */}
       <div
         className="w-full max-w-[900px] mx-auto mb-6 px-6"
         onClick={(e) => {
@@ -141,7 +143,7 @@ export default function ConversationOverlay({
             <motion.span
               className="text-pink-300 text-lg"
               animate={{ y: [0, 3, 0] }}
-              transition={{ duration: 1, repeat: Infinity }}
+              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
             >
               ▼
             </motion.span>

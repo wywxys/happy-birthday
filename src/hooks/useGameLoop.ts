@@ -2,7 +2,11 @@
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { MAX_DT } from "../game/constants";
 
-export function useGameLoop(callback: (dt: number) => void, active: boolean, paused: boolean): void {
+export function useGameLoop(
+  callback: (dt: number) => void,
+  active: boolean,
+  paused: boolean,
+): void {
   const cbRef = useRef(callback);
   const pausedRef = useRef(paused);
   const rafRef = useRef<number>(0);

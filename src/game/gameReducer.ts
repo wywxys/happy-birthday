@@ -14,7 +14,13 @@ import {
   SPEED_RAMP_INTERVAL,
   VICTORY_SCORE,
 } from "./constants";
-import { applyGravity, applyJump, boxesOverlap, cakeOffscreen, moveCake } from "./physics";
+import {
+  applyGravity,
+  applyJump,
+  boxesOverlap,
+  cakeOffscreen,
+  moveCake,
+} from "./physics";
 import { cakePoints } from "./spawner";
 import type { Cake, GameAction, GameState } from "./types";
 
@@ -50,7 +56,11 @@ function freshRunState(phase: "ready" | "playing"): GameState {
   };
 }
 
-function resolveCakeEaten(state: GameState, hit: Cake, sourceCakes: readonly Cake[]): GameState {
+function resolveCakeEaten(
+  state: GameState,
+  hit: Cake,
+  sourceCakes: readonly Cake[],
+): GameState {
   const points = cakePoints(hit.kind);
   const newScore = state.score + points;
   const newCakesEaten = state.cakesEaten + 1;
@@ -58,8 +68,14 @@ function resolveCakeEaten(state: GameState, hit: Cake, sourceCakes: readonly Cak
   let currentSpawnMs = state.currentSpawnMs;
 
   if (newCakesEaten % SPEED_RAMP_INTERVAL === 0) {
-    currentSpeed = Math.min(state.currentSpeed * SPEED_RAMP_FACTOR, CAKE_SPEED_BASE * SPEED_CAP_FACTOR);
-    currentSpawnMs = Math.max(state.currentSpawnMs * SPAWN_RAMP_FACTOR, SPAWN_FLOOR_MS);
+    currentSpeed = Math.min(
+      state.currentSpeed * SPEED_RAMP_FACTOR,
+      CAKE_SPEED_BASE * SPEED_CAP_FACTOR,
+    );
+    currentSpawnMs = Math.max(
+      state.currentSpawnMs * SPAWN_RAMP_FACTOR,
+      SPAWN_FLOOR_MS,
+    );
   }
 
   return {
@@ -69,7 +85,13 @@ function resolveCakeEaten(state: GameState, hit: Cake, sourceCakes: readonly Cak
     cakesEaten: newCakesEaten,
     currentSpeed,
     currentSpawnMs,
-    lastEatenCake: { x: hit.left, y: hit.bottom, kind: hit.kind, points, id: hit.id },
+    lastEatenCake: {
+      x: hit.left,
+      y: hit.bottom,
+      kind: hit.kind,
+      points,
+      id: hit.id,
+    },
     phase: newScore >= VICTORY_SCORE ? "victory" : "playing",
   };
 }
@@ -83,7 +105,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return state.phase === "ready" ? freshRunState("playing") : state;
 
     case "JUMP":
-      return state.phase === "playing" ? { ...state, birdVy: applyJump() } : state;
+      return state.phase === "playing"
+        ? { ...state, birdVy: applyJump() }
+        : state;
 
     case "SPAWN_CAKE":
       return state.phase === "playing"
@@ -109,7 +133,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         : state;
 
     case "RESET":
-      return state.phase === "gameover" || state.phase === "victory" ? freshRunState("ready") : state;
+      return state.phase === "gameover" || state.phase === "victory"
+        ? freshRunState("ready")
+        : state;
 
     case "SET_SCORE":
       if (state.phase !== "playing") return state;
@@ -119,11 +145,15 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         score: action.score,
         cakesEaten: action.cakesEaten,
         currentSpeed: Math.min(
-          CAKE_SPEED_BASE * Math.pow(SPEED_RAMP_FACTOR, Math.floor(action.cakesEaten / SPEED_RAMP_INTERVAL)),
+          CAKE_SPEED_BASE *
+            SPEED_RAMP_FACTOR **
+              Math.floor(action.cakesEaten / SPEED_RAMP_INTERVAL),
           CAKE_SPEED_BASE * SPEED_CAP_FACTOR,
         ),
         currentSpawnMs: Math.max(
-          CAKE_SPAWN_MS_BASE * Math.pow(SPAWN_RAMP_FACTOR, Math.floor(action.cakesEaten / SPEED_RAMP_INTERVAL)),
+          CAKE_SPAWN_MS_BASE *
+            SPAWN_RAMP_FACTOR **
+              Math.floor(action.cakesEaten / SPEED_RAMP_INTERVAL),
           SPAWN_FLOOR_MS,
         ),
       };
@@ -132,14 +162,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== "playing") return state;
 
       const hit = state.cakes.find((cake) => cake.id === action.cakeId);
-      return hit === undefined ? state : resolveCakeEaten(state, hit, state.cakes);
+      return hit === undefined
+        ? state
+        : resolveCakeEaten(state, hit, state.cakes);
     }
 
     case "TICK": {
       if (state.phase !== "playing") return state;
 
-      const { bottom, vy, hitFloor } = applyGravity(state.birdBottom, state.birdVy, action.dt);
-      const movedCakes = state.cakes.map((cake) => moveCake(cake, state.currentSpeed, action.dt));
+      const { bottom, vy, hitFloor } = applyGravity(
+        state.birdBottom,
+        state.birdVy,
+        action.dt,
+      );
+      const movedCakes = state.cakes.map((cake) =>
+        moveCake(cake, state.currentSpeed, action.dt),
+      );
 
       if (hitFloor) {
         return {
@@ -164,11 +202,24 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       }
 
       const hit = movedCakes.find((cake) =>
-        boxesOverlap(BIRD_LEFT, bottom, BIRD_WIDTH, BIRD_HEIGHT, cake.left, cake.bottom, CAKE_WIDTH, CAKE_HEIGHT),
+        boxesOverlap(
+          BIRD_LEFT,
+          bottom,
+          BIRD_WIDTH,
+          BIRD_HEIGHT,
+          cake.left,
+          cake.bottom,
+          CAKE_WIDTH,
+          CAKE_HEIGHT,
+        ),
       );
 
       if (hit !== undefined) {
-        return resolveCakeEaten({ ...state, birdBottom: bottom, birdVy: vy }, hit, movedCakes);
+        return resolveCakeEaten(
+          { ...state, birdBottom: bottom, birdVy: vy },
+          hit,
+          movedCakes,
+        );
       }
 
       return { ...state, birdBottom: bottom, birdVy: vy, cakes: movedCakes };

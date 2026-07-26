@@ -1,5 +1,5 @@
-import type { GameAction, GameState, CakeKind } from "./types";
 import type { Dispatch } from "react";
+import type { CakeKind, GameAction, GameState } from "./types";
 declare global {
   interface SfxApi {
     jump: () => void;
@@ -24,4 +24,3 @@ declare global {
     __sfxProbe?: SfxApi;
   }
 }
-export {};
