@@ -9,6 +9,7 @@ import { createCake } from "../game/spawner";
 import { useGameLoop } from "../hooks/useGameLoop";
 import ConversationOverlay from "./ConversationOverlay";
 import VictoryScreen from "./VictoryScreen";
+import MilestoneFlash from "./effects/MilestoneFlash";
 import { ParticleBurst, burst } from "./effects/ParticleBurst";
 import ScorePop from "./effects/ScorePop";
 
@@ -242,6 +243,7 @@ export default function GameShell() {
             </div>
           )}
         </div>
+        <MilestoneFlash cakesEaten={state.cakesEaten} />
         {hudVisible && (
           <div className="absolute top-4 left-4 px-4 py-2 rounded-full bg-black/50 text-white font-bold text-xl backdrop-blur-sm shadow-lg z-10">
             🎂{" "}
