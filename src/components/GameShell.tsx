@@ -56,6 +56,21 @@ export default function GameShell() {
   >([]);
 
   const particleContainerRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (state.lastMissedAt !== null && viewportRef.current) {
+      const el = viewportRef.current;
+      el.classList.remove("shake");
+      void el.offsetWidth;
+      el.classList.add("shake");
+      const t = setTimeout(
+        () => el.classList.remove("shake"),
+        constants.SCREEN_SHAKE_MS + 100,
+      );
+      return () => clearTimeout(t);
+    }
+  }, [state.lastMissedAt]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only trigger when lastEatenCake.id changes
   useEffect(() => {
@@ -154,6 +169,7 @@ export default function GameShell() {
       onKeyUp={() => undefined}
     >
       <div
+        ref={viewportRef}
         className="relative overflow-hidden shadow-2xl"
         style={viewportStyle}
       >
