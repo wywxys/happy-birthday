@@ -12,6 +12,12 @@ interface VictoryScreenProps {
   best: number;
   isNewBest: boolean;
   onRestart: () => void;
+  /** Whether endless mode has been unlocked (first victory unlocks it) */
+  endlessUnlocked: boolean;
+  /** Callback to start endless mode */
+  onStartEndless: () => void;
+  /** Callback to show leaderboard */
+  onShowLeaderboard: () => void;
 }
 
 export default function VictoryScreen({
@@ -19,6 +25,9 @@ export default function VictoryScreen({
   best,
   isNewBest,
   onRestart,
+  endlessUnlocked,
+  onStartEndless,
+  onShowLeaderboard,
 }: VictoryScreenProps) {
   const titleRef = useRef<HTMLDivElement>(null);
   const newBestRef = useRef<HTMLSpanElement>(null);
@@ -76,6 +85,7 @@ export default function VictoryScreen({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
+      onClick={(e) => e.stopPropagation()}
     >
       {/* Confetti */}
       {confettiPieces.map((piece) => (
@@ -110,7 +120,7 @@ export default function VictoryScreen({
       </div>
 
       {/* Stats */}
-      <div className="text-white/80 text-xl mb-8 text-center">
+      <div className="text-white/80 text-xl mb-4 text-center">
         <p>得分: {score} 🎂</p>
       </div>
 
@@ -120,14 +130,58 @@ export default function VictoryScreen({
         {isNewBest && <span ref={newBestRef}>· 🏆 NEW BEST!</span>}
       </div>
 
-      {/* Restart button */}
+      {/* Endless unlock announcement */}
+      {endlessUnlocked && (
+        <motion.div
+          className="mb-6 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border border-purple-400/40"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
+        >
+          <p className="text-purple-200 text-center font-bold">
+            🎊 无尽模式已解锁！
+          </p>
+          <p className="text-purple-300/70 text-sm text-center mt-1">
+            没有终点，挑战你的极限！
+          </p>
+        </motion.div>
+      )}
+
+      {/* Buttons */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center">
+        <motion.button
+          onClick={onRestart}
+          className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          再玩一次 🎮
+        </motion.button>
+
+        {endlessUnlocked && (
+          <motion.button
+            onClick={onStartEndless}
+            className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 1 }}
+          >
+            无尽模式 ♾️
+          </motion.button>
+        )}
+      </div>
+
+      {/* Leaderboard button */}
       <motion.button
-        onClick={onRestart}
-        className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        onClick={onShowLeaderboard}
+        className="mt-4 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white/80 font-medium transition-colors cursor-pointer"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1.2 }}
       >
-        再玩一次 🎮
+        🏆 排行榜
       </motion.button>
     </motion.div>
   );
