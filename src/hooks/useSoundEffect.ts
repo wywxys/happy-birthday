@@ -68,7 +68,7 @@ export function useSoundEffects(): SfxApi {
   }, [muted, tone]);
 
   const eat = useCallback(
-    (kind?: CakeKind) => {
+    (kind?: CakeKind, combo?: number) => {
       playCountRef.current += 1;
       if (muted || !ctxRef.current) return;
       if (ctxRef.current.state === "suspended") {
@@ -77,6 +77,11 @@ export function useSoundEffects(): SfxApi {
       tone("triangle", 900, 900, 200);
       if (kind === "golden") {
         tone("triangle", 1320, 1320, 200);
+      }
+      // Combo escalation sound: higher pitch on higher combos
+      if (combo && combo >= 2) {
+        const comboFreq = 1000 + combo * 150;
+        tone("sine", comboFreq, comboFreq + 200, 100, 50);
       }
     },
     [muted, tone],

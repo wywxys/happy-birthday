@@ -3,7 +3,7 @@ import type { CakeKind, GameAction, GameState } from "./types";
 declare global {
   interface SfxApi {
     jump: () => void;
-    eat: (kind?: CakeKind) => void;
+    eat: (kind?: CakeKind, combo?: number) => void;
     gameover: () => void;
     victory: () => void;
     setMuted: (m: boolean) => void;
