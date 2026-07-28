@@ -11,9 +11,12 @@ body {
   margin: 0;
   padding: 0;
   width: 100%;
-  height: 100%;
+  height: 100dvh;
   overflow: hidden;
   background: #1a1a2e;
+  /* Safe area padding for notched devices */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
 }
 
 #game-container {
@@ -79,4 +82,32 @@ body {
 }
 .golden-cake {
   animation: gold-pulse 800ms ease-in-out infinite;
+}
+
+/* Bird glow when combo is active */
+@keyframes combo-glow {
+  0%,
+  100% {
+    filter: drop-shadow(0 0 4px rgba(255, 215, 0, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9));
+  }
+}
+.combo-active {
+  animation: combo-glow 600ms ease-in-out infinite;
+}
+
+/* Floating animation for idle elements */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+.float-anim {
+  animation: float 3s ease-in-out infinite;
 }
