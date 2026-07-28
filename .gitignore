@@ -49,3 +49,6 @@ Desktop.ini
 
 # omo
 .omo/
+
+# Windows reserved device names accidentally created
+/nul
