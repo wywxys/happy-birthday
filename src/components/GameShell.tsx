@@ -1,39 +1,44 @@
 "use client";
 
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import * as constants from "../game/constants";
 import { gameReducer, initialGameState } from "../game/gameReducer";
+import {
+  addToLeaderboard,
+  isEndlessUnlocked,
+  unlockEndless,
+} from "../game/leaderboard";
 import { createCake } from "../game/spawner";
+import { useBGM } from "../hooks/useBGM";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { usePersistedNumber } from "../hooks/usePersisted";
 import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useSoundEffects } from "../hooks/useSoundEffect";
 import ConversationOverlay from "./ConversationOverlay";
+import LeaderboardPanel from "./LeaderboardPanel";
 import VictoryScreen from "./VictoryScreen";
+import { BirdTrail } from "./effects/BirdTrail";
+import ComboDisplay from "./effects/ComboDisplay";
+import DifficultyMeter from "./effects/DifficultyMeter";
 import MilestoneFlash from "./effects/MilestoneFlash";
+import ParallaxBackground from "./effects/ParallaxBackground";
 import { ParticleBurst, burst } from "./effects/ParticleBurst";
 import ScorePop from "./effects/ScorePop";
 
-const viewportStyle = {
-  width: `min(100vw, ${constants.WORLD_WIDTH / constants.WORLD_HEIGHT} * 100vh)`,
+const viewportStyle: React.CSSProperties = {
+  width: `min(100vw, ${constants.WORLD_WIDTH / constants.WORLD_HEIGHT} * 100dvh)`,
   aspectRatio: `${constants.WORLD_WIDTH} / ${constants.WORLD_HEIGHT}`,
-  maxHeight: "100vh",
+  maxHeight: "100dvh",
 };
-const worldStyle = {
+const worldStyle: React.CSSProperties = {
   width: `${constants.WORLD_WIDTH}px`,
   height: `${constants.WORLD_HEIGHT}px`,
   transformOrigin: "top left",
-  transform: `scale(min(calc(100vw / ${constants.WORLD_WIDTH}), calc(100vh / ${constants.WORLD_HEIGHT})))`,
+  transform: "scale(var(--game-scale, 1))",
 };
-const skyStyle = {
-  background: "linear-gradient(rgb(70, 178, 192), rgb(60, 95, 160))",
-};
-const groundStyle = {
-  height: "15%",
-  background: "linear-gradient(rgb(131, 85, 17), rgb(105, 60, 22))",
-};
+// Ground and sky styles are now handled by ParallaxBackground canvas
 const readyStyle = { top: "30%" };
 const promptStyle = { textShadow: "2px 2px 6px rgba(0,0,0,0.6)" };
 
@@ -46,6 +51,38 @@ export default function GameShell() {
   useEffect(() => {
     sfxRef.current = sfx;
   });
+
+  // 8-bit BGM — plays during "playing" phase, tempo syncs with difficulty
+  useBGM({
+    playing: state.phase === "playing",
+    muted: sfx.muted,
+    currentSpeed: state.currentSpeed,
+  });
+
+  // Endless mode & leaderboard state
+  const [endlessUnlocked, setEndlessUnlocked] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const maxComboRef = useRef(0);
+
+  // Check endless unlock status on mount
+  useEffect(() => {
+    setEndlessUnlocked(isEndlessUnlocked());
+  }, []);
+
+  // Track max combo during a run
+  useEffect(() => {
+    if (state.combo > maxComboRef.current) {
+      maxComboRef.current = state.combo;
+    }
+  }, [state.combo]);
+
+  // Reset max combo on new run
+  useEffect(() => {
+    if (state.phase === "playing" && state.score === 0) {
+      maxComboRef.current = 0;
+    }
+  }, [state.phase, state.score]);
+
   const [best, setBest] = usePersistedNumber(
     constants.BEST_SCORE_STORAGE_KEY,
     0,
@@ -65,6 +102,27 @@ export default function GameShell() {
   const viewportRef = useRef<HTMLDivElement>(null);
   const hitstopUntilRef = useRef(0);
   const [inHitstop, setInHitstop] = useState(false);
+
+  // Responsive scaling — compute scale factor on mount + resize
+  useEffect(() => {
+    const update = () => {
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const scale = Math.min(
+        vw / constants.WORLD_WIDTH,
+        vh / constants.WORLD_HEIGHT,
+      );
+      document.documentElement.style.setProperty("--game-scale", String(scale));
+    };
+    update();
+    window.addEventListener("resize", update);
+    // Also handle mobile viewport changes (address bar hide/show)
+    window.visualViewport?.addEventListener("resize", update);
+    return () => {
+      window.removeEventListener("resize", update);
+      window.visualViewport?.removeEventListener("resize", update);
+    };
+  }, []);
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -90,7 +148,7 @@ export default function GameShell() {
         particleContainerRef.current,
         le.x + constants.CAKE_WIDTH / 2,
         le.y + constants.CAKE_HEIGHT / 2,
-        le.kind === "golden" ? 20 : 12,
+        le.kind === "golden" ? 10 : 6,
         le.kind === "golden"
           ? ["#ffd700", "#fff8dc", "#ffe873"]
           : ["#ffb6c1", "#ff69b4", "#ffffff"],
@@ -130,7 +188,7 @@ export default function GameShell() {
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: fire per eat
   useEffect(() => {
-    if (state.lastEatenCake) sfx.eat(state.lastEatenCake.kind);
+    if (state.lastEatenCake) sfx.eat(state.lastEatenCake.kind, state.combo);
   }, [state.lastEatenCake?.id]);
 
   useEffect(() => {
@@ -198,20 +256,41 @@ export default function GameShell() {
   }, []);
 
   const handleClick = useCallback(() => {
-    if (state.phase === "ready") dispatch({ type: "START" });
+    if (state.phase === "ready") dispatch({ type: "START", mode: state.mode });
     else if (state.phase === "playing") {
       sfx.jump();
       dispatch({ type: "JUMP" });
     } else if (state.phase === "paused") dispatch({ type: "RESUME" });
-  }, [state.phase, sfx]);
+  }, [state.phase, state.mode, sfx]);
 
   const handleRestart = useCallback(() => dispatch({ type: "RESET" }), []);
+
+  const handleStartEndless = useCallback(() => {
+    dispatch({ type: "RESET" });
+    // After reset puts us in "ready", immediately start in endless mode
+    setTimeout(() => dispatch({ type: "START", mode: "endless" }), 0);
+  }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: evaluate once per terminal phase transition using pre-write best
   useEffect(() => {
     if (state.phase === "gameover" || state.phase === "victory") {
       isNewBestRef.current = state.score > best && state.score > 0;
       if (isNewBestRef.current) setBest(state.score);
+
+      // Record to leaderboard
+      addToLeaderboard({
+        score: state.score,
+        mode: state.mode,
+        date: new Date().toISOString(),
+        cakesEaten: state.cakesEaten,
+        maxCombo: maxComboRef.current,
+      });
+
+      // Unlock endless on first victory
+      if (state.phase === "victory" && !endlessUnlocked) {
+        unlockEndless();
+        setEndlessUnlocked(true);
+      }
     } else {
       isNewBestRef.current = false;
     }
@@ -242,7 +321,8 @@ export default function GameShell() {
 
   return (
     <div
-      className="w-screen h-screen bg-neutral-900 overflow-hidden relative flex items-center justify-center select-none"
+      className="w-screen bg-neutral-900 overflow-hidden relative flex items-center justify-center select-none"
+      style={{ height: "100dvh" }}
       onClick={handleClick}
       onKeyUp={() => undefined}
     >
@@ -252,13 +332,27 @@ export default function GameShell() {
         style={viewportStyle}
       >
         <div className="absolute inset-0" style={worldStyle}>
-          <div className="absolute inset-0" style={skyStyle} />
-          <div
-            className="absolute left-0 right-0 bottom-0"
-            style={groundStyle}
+          {/* Layer 1: Background canvas (bottom) */}
+          <ParallaxBackground
+            scrolling={state.phase === "playing"}
+            speedFactor={state.currentSpeed / constants.CAKE_SPEED_BASE}
+            score={state.score}
+            reducedMotion={reducedMotion}
           />
+        </div>
+        {/* Layer 2: Game objects (on top of canvas, separate stacking context) */}
+        <div
+          className="absolute inset-0"
+          style={{ ...worldStyle, isolation: "isolate" }}
+        >
+          {/* Bird trail effect */}
+          <BirdTrail
+            birdBottom={state.birdBottom}
+            reducedMotion={reducedMotion}
+          />
+          {/* Bird character with velocity-based tilt */}
           <div
-            className="absolute transition-none"
+            className={`absolute transition-none${state.combo >= 2 ? " combo-active" : ""}`}
             style={{
               left: `${constants.BIRD_LEFT}px`,
               bottom: `${state.birdBottom}px`,
@@ -267,6 +361,10 @@ export default function GameShell() {
               backgroundImage: "url(/cloud.png)",
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
+              transform: reducedMotion
+                ? undefined
+                : `rotate(${Math.max(-25, Math.min(25, -state.birdVy * 0.04))}deg)`,
+              transformOrigin: "center center",
             }}
           />
           {state.cakes.map((c) => (
@@ -294,9 +392,11 @@ export default function GameShell() {
             reducedMotion={reducedMotion}
           />
           <ParticleBurst containerRef={particleContainerRef} />
+          {/* Combo display */}
+          <ComboDisplay combo={state.combo} reducedMotion={reducedMotion} />
           {state.phase === "ready" && (
             <div
-              className="absolute left-0 right-0 flex justify-center"
+              className="absolute left-0 right-0 flex flex-col items-center gap-3"
               style={readyStyle}
             >
               <h1
@@ -305,6 +405,23 @@ export default function GameShell() {
               >
                 点击屏幕开始游戏
               </h1>
+              {state.mode === "endless" && (
+                <span className="text-purple-300 text-lg font-bold bg-black/40 px-4 py-1 rounded-full">
+                  ♾️ 无尽模式
+                </span>
+              )}
+              {endlessUnlocked && state.mode === "normal" && (
+                <button
+                  type="button"
+                  className="text-purple-300/80 text-sm bg-black/30 px-4 py-1 rounded-full hover:bg-black/50 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    dispatch({ type: "START", mode: "endless" });
+                  }}
+                >
+                  或切换 ♾️ 无尽模式
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -314,7 +431,7 @@ export default function GameShell() {
         />
         {hudVisible && (
           <div className="absolute top-4 left-4 px-4 py-2 rounded-full bg-black/50 text-white font-bold text-xl backdrop-blur-sm shadow-lg z-10">
-            🎂{" "}
+            {state.mode === "endless" ? "♾️" : "🎂"}{" "}
             <motion.span
               key={state.score}
               className="inline-block"
@@ -323,8 +440,10 @@ export default function GameShell() {
               transition={{ duration: reducedMotion ? 0 : 0.25 }}
             >
               {state.score}
-            </motion.span>{" "}
-            / {constants.VICTORY_SCORE}
+            </motion.span>
+            {state.mode === "normal" && (
+              <span> / {constants.VICTORY_SCORE}</span>
+            )}
           </div>
         )}
         <button
@@ -361,6 +480,14 @@ export default function GameShell() {
             极简动效已启用
           </div>
         )}
+        {/* Difficulty/speed meter */}
+        {hudVisible && (
+          <DifficultyMeter
+            currentSpeed={state.currentSpeed}
+            mode={state.mode}
+            reducedMotion={reducedMotion}
+          />
+        )}
       </div>
       {state.phase === "intro" && (
         <ConversationOverlay
@@ -375,13 +502,16 @@ export default function GameShell() {
           transition={{ duration: 0.3 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <h2 className="text-4xl md:text-6xl font-bold text-red-400 mb-6">
+          <h2 className="text-4xl md:text-6xl font-bold text-red-400 mb-4">
             游戏结束 😢
           </h2>
-          <p className="text-white/80 text-xl mb-8">
+          {state.mode === "endless" && (
+            <span className="text-purple-300/80 text-sm mb-2">♾️ 无尽模式</span>
+          )}
+          <p className="text-white/80 text-xl mb-6">
             最终得分: {state.score} 🎂
           </p>
-          <p className="text-white/80 text-lg mb-4">
+          <p className="text-white/80 text-lg mb-6">
             最佳: {best} 🎂{" "}
             {isNewBest && (
               <motion.span
@@ -393,13 +523,34 @@ export default function GameShell() {
               </motion.span>
             )}
           </p>
+          <div className="flex flex-col sm:flex-row gap-3 items-center">
+            <motion.button
+              onClick={handleRestart}
+              className="px-8 py-4 bg-gradient-to-r from-red-500 to-orange-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              再试一次 🎮
+            </motion.button>
+            {endlessUnlocked && state.mode !== "endless" && (
+              <motion.button
+                onClick={handleStartEndless}
+                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-lg font-bold rounded-full shadow-lg cursor-pointer"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                无尽模式 ♾️
+              </motion.button>
+            )}
+          </div>
           <motion.button
-            onClick={handleRestart}
-            className="px-8 py-4 bg-gradient-to-r from-red-500 to-orange-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+            onClick={() => setShowLeaderboard(true)}
+            className="mt-4 px-6 py-2 bg-white/10 hover:bg-white/20 rounded-full text-white/80 font-medium transition-colors cursor-pointer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
           >
-            再试一次 🎮
+            🏆 排行榜
           </motion.button>
         </motion.div>
       )}
@@ -409,8 +560,20 @@ export default function GameShell() {
           best={best}
           isNewBest={isNewBest}
           onRestart={handleRestart}
+          endlessUnlocked={endlessUnlocked}
+          onStartEndless={handleStartEndless}
+          onShowLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
+      {/* Leaderboard overlay */}
+      <AnimatePresence>
+        {showLeaderboard && (
+          <LeaderboardPanel
+            currentScore={state.score}
+            onClose={() => setShowLeaderboard(false)}
+          />
+        )}
+      </AnimatePresence>
       <div className="hidden" aria-hidden>
         <Image src="/cloud.png" alt="" width={60} height={45} priority />
         <Image src="/cake.png" alt="" width={50} height={50} priority />

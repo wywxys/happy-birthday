@@ -85,8 +85,25 @@ export default function ConversationOverlay({
       role="button"
       tabIndex={0}
     >
+      {/* Preload both portraits */}
+      <Image
+        src="/shan.png"
+        alt=""
+        width={1}
+        height={1}
+        priority
+        className="hidden"
+      />
+      <Image
+        src="/yun.png"
+        alt=""
+        width={1}
+        height={1}
+        priority
+        className="hidden"
+      />
       {/* Speaker portrait — anchored above the dialog card */}
-      <AnimatePresence mode="wait">
+      <AnimatePresence mode="popLayout">
         <motion.div
           key={`speaker-${index}`}
           className="absolute right-[6%] bottom-[220px] w-[200px] pointer-events-none drop-shadow-2xl"
