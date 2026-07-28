@@ -53,6 +53,20 @@ export const HITSTOP_MS = 80;
 /** Duration of screen-shake effect in milliseconds */
 export const SCREEN_SHAKE_MS = 400;
 
+// ─── Combo System ─────────────────────────────────────────────────────────────
+/** Max time window (ms) between eats to maintain a combo */
+export const COMBO_WINDOW_MS = 2000;
+/** Bonus multiplier per combo level (e.g., combo=3 → 1 + 3*0.5 = 2.5x) */
+export const COMBO_BONUS_FACTOR = 0.5;
+
+// ─── Endless Mode ─────────────────────────────────────────────────────────────
+/** In endless mode, speed/spawn continue to ramp beyond the normal caps */
+export const ENDLESS_SPEED_CAP_FACTOR = 3.0;
+export const ENDLESS_SPAWN_FLOOR_MS = 450;
+
 // ─── Storage Keys ─────────────────────────────────────────────────────────────
 export const BEST_SCORE_STORAGE_KEY = "happy-birthday-best";
 export const MUTED_STORAGE_KEY = "happy-birthday-muted";
+export const ENDLESS_UNLOCKED_KEY = "happy-birthday-endless-unlocked";
+export const LEADERBOARD_KEY = "happy-birthday-leaderboard";
+export const LEADERBOARD_MAX_ENTRIES = 10;

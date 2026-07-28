@@ -6,6 +6,7 @@ export type Phase =
   | "gameover"
   | "victory";
 export type CakeKind = "regular" | "golden";
+export type GameMode = "normal" | "endless";
 export interface Cake {
   id: number;
   left: number;
@@ -14,7 +15,7 @@ export interface Cake {
 }
 export type GameAction =
   | { type: "INTRO_DONE" }
-  | { type: "START" }
+  | { type: "START"; mode?: GameMode }
   | { type: "JUMP" }
   | { type: "PAUSE" }
   | { type: "RESUME" }
@@ -27,6 +28,7 @@ export type GameAction =
   | { type: "RESET" };
 export interface GameState {
   phase: Phase;
+  mode: GameMode;
   birdBottom: number;
   birdVy: number;
   cakes: Cake[];
@@ -44,4 +46,7 @@ export interface GameState {
     id: number;
   } | null;
   lastMissedAt: number | null;
+  /** Combo tracking */
+  combo: number;
+  lastEatTime: number;
 }

@@ -7,6 +7,10 @@ import {
   CAKE_SPAWN_MS_BASE,
   CAKE_SPEED_BASE,
   CAKE_WIDTH,
+  COMBO_BONUS_FACTOR,
+  COMBO_WINDOW_MS,
+  ENDLESS_SPAWN_FLOOR_MS,
+  ENDLESS_SPEED_CAP_FACTOR,
   SPAWN_FLOOR_MS,
   SPAWN_RAMP_FACTOR,
   SPEED_CAP_FACTOR,
@@ -22,10 +26,11 @@ import {
   moveCake,
 } from "./physics";
 import { cakePoints } from "./spawner";
-import type { Cake, GameAction, GameState } from "./types";
+import type { Cake, GameAction, GameMode, GameState } from "./types";
 
 export const initialGameState: GameState = {
   phase: "intro",
+  mode: "normal",
   birdBottom: BIRD_START_BOTTOM,
   birdVy: 0,
   cakes: [],
@@ -37,11 +42,17 @@ export const initialGameState: GameState = {
   runStartTs: 0,
   lastEatenCake: null,
   lastMissedAt: null,
+  combo: 0,
+  lastEatTime: 0,
 };
 
-function freshRunState(phase: "ready" | "playing"): GameState {
+function freshRunState(
+  phase: "ready" | "playing",
+  mode: GameMode = "normal",
+): GameState {
   return {
     phase,
+    mode,
     birdBottom: BIRD_START_BOTTOM,
     birdVy: 0,
     cakes: [],
@@ -53,6 +64,8 @@ function freshRunState(phase: "ready" | "playing"): GameState {
     runStartTs: phase === "playing" ? performance.now() : 0,
     lastEatenCake: null,
     lastMissedAt: null,
+    combo: 0,
+    lastEatTime: 0,
   };
 }
 
@@ -61,22 +74,40 @@ function resolveCakeEaten(
   hit: Cake,
   sourceCakes: readonly Cake[],
 ): GameState {
-  const points = cakePoints(hit.kind);
+  const now = performance.now();
+  const timeSinceLastEat = now - state.lastEatTime;
+  const newCombo = timeSinceLastEat < COMBO_WINDOW_MS ? state.combo + 1 : 1;
+
+  const basePoints = cakePoints(hit.kind);
+  // Apply combo bonus: combo >= 2 gives extra points
+  const comboMultiplier = newCombo >= 2 ? 1 + newCombo * COMBO_BONUS_FACTOR : 1;
+  const points = Math.round(basePoints * comboMultiplier);
+
   const newScore = state.score + points;
   const newCakesEaten = state.cakesEaten + 1;
+
+  // Speed/spawn caps differ between normal and endless
+  const speedCap =
+    state.mode === "endless"
+      ? CAKE_SPEED_BASE * ENDLESS_SPEED_CAP_FACTOR
+      : CAKE_SPEED_BASE * SPEED_CAP_FACTOR;
+  const spawnFloor =
+    state.mode === "endless" ? ENDLESS_SPAWN_FLOOR_MS : SPAWN_FLOOR_MS;
+
   let currentSpeed = state.currentSpeed;
   let currentSpawnMs = state.currentSpawnMs;
 
   if (newCakesEaten % SPEED_RAMP_INTERVAL === 0) {
-    currentSpeed = Math.min(
-      state.currentSpeed * SPEED_RAMP_FACTOR,
-      CAKE_SPEED_BASE * SPEED_CAP_FACTOR,
-    );
+    currentSpeed = Math.min(state.currentSpeed * SPEED_RAMP_FACTOR, speedCap);
     currentSpawnMs = Math.max(
       state.currentSpawnMs * SPAWN_RAMP_FACTOR,
-      SPAWN_FLOOR_MS,
+      spawnFloor,
     );
   }
+
+  // In normal mode, reaching VICTORY_SCORE triggers victory
+  // In endless mode, game continues indefinitely
+  const reachedVictory = state.mode === "normal" && newScore >= VICTORY_SCORE;
 
   return {
     ...state,
@@ -85,6 +116,8 @@ function resolveCakeEaten(
     cakesEaten: newCakesEaten,
     currentSpeed,
     currentSpawnMs,
+    combo: newCombo,
+    lastEatTime: now,
     lastEatenCake: {
       x: hit.left,
       y: hit.bottom,
@@ -92,7 +125,7 @@ function resolveCakeEaten(
       points,
       id: hit.id,
     },
-    phase: newScore >= VICTORY_SCORE ? "victory" : "playing",
+    phase: reachedVictory ? "victory" : "playing",
   };
 }
 
@@ -102,7 +135,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return state.phase === "intro" ? { ...state, phase: "ready" } : state;
 
     case "START":
-      return state.phase === "ready" ? freshRunState("playing") : state;
+      return state.phase === "ready"
+        ? freshRunState("playing", action.mode ?? state.mode)
+        : state;
 
     case "JUMP":
       return state.phase === "playing"
@@ -134,7 +169,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
 
     case "RESET":
       return state.phase === "gameover" || state.phase === "victory"
-        ? freshRunState("ready")
+        ? freshRunState("ready", state.mode)
         : state;
 
     case "SET_SCORE":
