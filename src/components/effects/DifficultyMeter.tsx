@@ -3,7 +3,8 @@
 import { motion } from "motion/react";
 import {
   CAKE_SPEED_BASE,
-  ENDLESS_SPEED_CAP_FACTOR,
+  EASY_SPEED_CAP_FACTOR,
+  HARD_SPEED_CAP_FACTOR,
   SPEED_CAP_FACTOR,
 } from "../../game/constants";
 import type { GameMode } from "../../game/types";
@@ -24,7 +25,11 @@ export default function DifficultyMeter({
   reducedMotion,
 }: DifficultyMeterProps) {
   const capFactor =
-    mode === "endless" ? ENDLESS_SPEED_CAP_FACTOR : SPEED_CAP_FACTOR;
+    mode === "easy"
+      ? EASY_SPEED_CAP_FACTOR
+      : mode === "hard"
+        ? HARD_SPEED_CAP_FACTOR
+        : SPEED_CAP_FACTOR;
   const maxSpeed = CAKE_SPEED_BASE * capFactor;
   const progress = Math.min(
     (currentSpeed - CAKE_SPEED_BASE) / (maxSpeed - CAKE_SPEED_BASE),
@@ -32,7 +37,7 @@ export default function DifficultyMeter({
   );
 
   // Color transitions from green → yellow → red
-  const hue = Math.round(120 - progress * 120); // 120=green, 0=red
+  const hue = Math.round(120 - progress * 120);
   const color = `hsl(${hue}, 80%, 50%)`;
 
   return (

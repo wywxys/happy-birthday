@@ -4,6 +4,8 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { motion } from "motion/react";
 import { useMemo, useRef } from "react";
+import { MODE_META, MODE_ORDER, modeShortLabel } from "../game/modeMeta";
+import type { GameMode } from "../game/types";
 
 gsap.registerPlugin(useGSAP);
 
@@ -11,11 +13,14 @@ interface VictoryScreenProps {
   score: number;
   best: number;
   isNewBest: boolean;
+  mode: GameMode;
   onRestart: () => void;
-  /** Whether endless mode has been unlocked (first victory unlocks it) */
-  endlessUnlocked: boolean;
-  /** Callback to start endless mode */
-  onStartEndless: () => void;
+  /** Whether normal + hard modes have been unlocked */
+  modesUnlocked: boolean;
+  /** Whether we just unlocked them on THIS victory (first-time celebration) */
+  justUnlocked: boolean;
+  /** Callback to start a specific mode */
+  onStartMode: (mode: GameMode) => void;
   /** Callback to show leaderboard */
   onShowLeaderboard: () => void;
 }
@@ -24,9 +29,11 @@ export default function VictoryScreen({
   score,
   best,
   isNewBest,
+  mode,
   onRestart,
-  endlessUnlocked,
-  onStartEndless,
+  modesUnlocked,
+  justUnlocked,
+  onStartMode,
   onShowLeaderboard,
 }: VictoryScreenProps) {
   const titleRef = useRef<HTMLDivElement>(null);
@@ -79,6 +86,8 @@ export default function VictoryScreen({
     }));
   }, []);
 
+  const modeLabel = modeShortLabel(mode);
+
   return (
     <motion.div
       className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md"
@@ -110,7 +119,7 @@ export default function VictoryScreen({
       {/* Title */}
       <div
         ref={titleRef}
-        className="text-5xl md:text-7xl font-bold text-white mb-8 flex"
+        className="text-5xl md:text-7xl font-bold text-white mb-4 flex"
       >
         {chars.map((char) => (
           <span key={char} className="char inline-block">
@@ -119,58 +128,65 @@ export default function VictoryScreen({
         ))}
       </div>
 
-      {/* Stats */}
-      <div className="text-white/80 text-xl mb-4 text-center">
-        <p>得分: {score} 🎂</p>
+      {/* Mode + Stats */}
+      <div className="text-white/70 text-sm mb-2">{modeLabel}</div>
+      <div className="text-white/80 text-xl mb-2 text-center">
+        得分: {score} 🎂
       </div>
-
-      {/* Best score */}
-      <div className="mb-6 text-2xl text-white">
+      <div className="mb-6 text-lg text-white/80">
         最佳: {best} 🎂{" "}
         {isNewBest && <span ref={newBestRef}>· 🏆 NEW BEST!</span>}
       </div>
 
-      {/* Endless unlock announcement */}
-      {endlessUnlocked && (
+      {/* First-time unlock celebration */}
+      {justUnlocked && (
         <motion.div
-          className="mb-6 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500/30 to-indigo-500/30 border border-purple-400/40"
+          className="mb-6 px-6 py-3 rounded-xl bg-gradient-to-r from-purple-500/30 to-orange-500/30 border border-purple-400/40 max-w-md text-center"
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8, type: "spring", stiffness: 300 }}
         >
-          <p className="text-purple-200 text-center font-bold">
-            🎊 无尽模式已解锁！
+          <p className="text-purple-200 font-bold text-lg">
+            🎊 普通 & 困难模式已解锁！
           </p>
-          <p className="text-purple-300/70 text-sm text-center mt-1">
-            没有终点，挑战你的极限！
+          <p className="text-purple-300/70 text-sm mt-1">
+            挑战更高难度，冲榜吧~
           </p>
         </motion.div>
       )}
 
-      {/* Buttons */}
-      <div className="flex flex-col sm:flex-row gap-3 items-center">
+      {/* Buttons — restart current mode + jump into any other unlocked mode */}
+      <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-center justify-center max-w-lg">
         <motion.button
           onClick={onRestart}
-          className="px-8 py-4 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
+          className="px-6 py-3 bg-gradient-to-r from-pink-500 to-purple-600 text-white text-lg font-bold rounded-full shadow-lg cursor-pointer"
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
         >
           再玩一次 🎮
         </motion.button>
 
-        {endlessUnlocked && (
-          <motion.button
-            onClick={onStartEndless}
-            className="px-8 py-4 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 1 }}
-          >
-            无尽模式 ♾️
-          </motion.button>
-        )}
+        {MODE_ORDER.filter((id) => {
+          if (id === mode) return false; // current mode already covered by restart
+          if (id === "easy") return true; // easy always available
+          return modesUnlocked;
+        }).map((id, i) => {
+          const m = MODE_META[id];
+          return (
+            <motion.button
+              key={id}
+              onClick={() => onStartMode(id)}
+              className={`px-5 py-3 bg-gradient-to-r ${m.gradient} text-white font-bold rounded-full shadow-lg cursor-pointer`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.9 + i * 0.1 }}
+            >
+              {m.label} {m.icon}
+            </motion.button>
+          );
+        })}
       </div>
 
       {/* Leaderboard button */}

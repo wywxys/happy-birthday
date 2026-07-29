@@ -77,6 +77,10 @@ export function useSoundEffects(): SfxApi {
       tone("triangle", 900, 900, 200);
       if (kind === "golden") {
         tone("triangle", 1320, 1320, 200);
+      } else if (kind === "heart") {
+        // Soft warm chirp for heart cakes
+        tone("sine", 800, 1200, 120, 50);
+        tone("sine", 1200, 800, 120, 170);
       }
       // Combo escalation sound: higher pitch on higher combos
       if (combo && combo >= 2) {

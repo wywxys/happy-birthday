@@ -4,6 +4,8 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import type { LeaderboardEntry } from "../game/leaderboard";
 import { getLeaderboard } from "../game/leaderboard";
+import { MODE_META } from "../game/modeMeta";
+import type { GameMode } from "../game/types";
 
 interface LeaderboardPanelProps {
   /** If provided, this score will be highlighted */
@@ -29,7 +31,9 @@ export default function LeaderboardPanel({
   };
 
   const getModeLabel = (mode: string) => {
-    return mode === "endless" ? "♾️ 无尽" : "🎂 普通";
+    if (mode === "endless") return "♾️ 无尽"; // legacy label preserved
+    const m = MODE_META[mode as GameMode];
+    return m ? `${m.icon} ${m.label}` : mode;
   };
 
   return (

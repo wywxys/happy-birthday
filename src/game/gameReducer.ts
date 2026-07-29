@@ -1,6 +1,7 @@
 import {
   BIRD_HEIGHT,
   BIRD_LEFT,
+  BIRD_MIN_BOTTOM,
   BIRD_START_BOTTOM,
   BIRD_WIDTH,
   CAKE_HEIGHT,
@@ -9,14 +10,20 @@ import {
   CAKE_WIDTH,
   COMBO_BONUS_FACTOR,
   COMBO_WINDOW_MS,
-  ENDLESS_SPAWN_FLOOR_MS,
-  ENDLESS_SPEED_CAP_FACTOR,
-  SPAWN_FLOOR_MS,
+  EASY_BOUNCE_VY,
+  EASY_MAX_LIVES,
+  EASY_MAX_SIZE,
+  EASY_MAX_SIZE_SCALE,
+  EASY_SPAWN_FLOOR_MS,
+  EASY_SPEED_CAP_FACTOR,
+  HARD_SPAWN_FLOOR_MS,
+  HARD_SPEED_CAP_FACTOR,
+  NORMAL_SPAWN_FLOOR_MS,
+  NORMAL_SPEED_CAP_FACTOR,
   SPAWN_RAMP_FACTOR,
-  SPEED_CAP_FACTOR,
   SPEED_RAMP_FACTOR,
   SPEED_RAMP_INTERVAL,
-  VICTORY_SCORE,
+  VICTORY_CAKES,
 } from "./constants";
 import {
   applyGravity,
@@ -28,9 +35,57 @@ import {
 import { cakePoints } from "./spawner";
 import type { Cake, GameAction, GameMode, GameState } from "./types";
 
+// ─── Mode Predicates ─────────────────────────────────────────────────────────
+
+/**
+ * Easy and Normal share the "lenient" mechanic set:
+ *   • bird grows per cake (visual + hitbox)
+ *   • floor collision consumes a bounce credit instead of instant gameover
+ *   • missing a cake resets size but is not fatal
+ *   • heart cakes can spawn to refill bounces
+ * Only Hard opts out of all of these.
+ */
+export function isLenientMode(mode: GameMode): boolean {
+  return mode !== "hard";
+}
+
+/** Only Easy has a victory (25 cakes); Normal & Hard are endless. */
+export function hasVictoryCondition(mode: GameMode): boolean {
+  return mode === "easy";
+}
+
+// ─── Mode-Specific Difficulty Caps ───────────────────────────────────────────
+function speedCapFor(mode: GameMode): number {
+  if (mode === "easy") return CAKE_SPEED_BASE * EASY_SPEED_CAP_FACTOR;
+  if (mode === "hard") return CAKE_SPEED_BASE * HARD_SPEED_CAP_FACTOR;
+  return CAKE_SPEED_BASE * NORMAL_SPEED_CAP_FACTOR;
+}
+
+function spawnFloorFor(mode: GameMode): number {
+  if (mode === "easy") return EASY_SPAWN_FLOOR_MS;
+  if (mode === "hard") return HARD_SPAWN_FLOOR_MS;
+  return NORMAL_SPAWN_FLOOR_MS;
+}
+
+/**
+ * Effective bird visual scale from state.birdSize (1..EASY_MAX_SIZE).
+ * Applies to both Easy and Normal (lenient modes). Hard stays at 1x.
+ * Clamps input defensively — pure and stable even on unexpected state.
+ */
+export function birdScaleFor(state: {
+  mode: GameMode;
+  birdSize: number;
+}): number {
+  if (!isLenientMode(state.mode)) return 1;
+  const clamped = Math.max(1, Math.min(EASY_MAX_SIZE, state.birdSize));
+  const t = (clamped - 1) / (EASY_MAX_SIZE - 1); // 0..1
+  return 1 + t * (EASY_MAX_SIZE_SCALE - 1);
+}
+
+// ─── Initial / Fresh States ──────────────────────────────────────────────────
 export const initialGameState: GameState = {
   phase: "intro",
-  mode: "normal",
+  mode: "easy",
   birdBottom: BIRD_START_BOTTOM,
   birdVy: 0,
   cakes: [],
@@ -44,11 +99,13 @@ export const initialGameState: GameState = {
   lastMissedAt: null,
   combo: 0,
   lastEatTime: 0,
+  birdSize: 1,
+  livesLeft: EASY_MAX_LIVES,
 };
 
 function freshRunState(
   phase: "ready" | "playing",
-  mode: GameMode = "normal",
+  mode: GameMode = "easy",
 ): GameState {
   return {
     phase,
@@ -66,9 +123,12 @@ function freshRunState(
     lastMissedAt: null,
     combo: 0,
     lastEatTime: 0,
+    birdSize: 1,
+    livesLeft: EASY_MAX_LIVES,
   };
 }
 
+// ─── Eat Resolution ──────────────────────────────────────────────────────────
 function resolveCakeEaten(
   state: GameState,
   hit: Cake,
@@ -79,35 +139,42 @@ function resolveCakeEaten(
   const newCombo = timeSinceLastEat < COMBO_WINDOW_MS ? state.combo + 1 : 1;
 
   const basePoints = cakePoints(hit.kind);
-  // Apply combo bonus: combo >= 2 gives extra points
   const comboMultiplier = newCombo >= 2 ? 1 + newCombo * COMBO_BONUS_FACTOR : 1;
   const points = Math.round(basePoints * comboMultiplier);
 
   const newScore = state.score + points;
   const newCakesEaten = state.cakesEaten + 1;
 
-  // Speed/spawn caps differ between normal and endless
-  const speedCap =
-    state.mode === "endless"
-      ? CAKE_SPEED_BASE * ENDLESS_SPEED_CAP_FACTOR
-      : CAKE_SPEED_BASE * SPEED_CAP_FACTOR;
-  const spawnFloor =
-    state.mode === "endless" ? ENDLESS_SPAWN_FLOOR_MS : SPAWN_FLOOR_MS;
-
   let currentSpeed = state.currentSpeed;
   let currentSpawnMs = state.currentSpawnMs;
 
   if (newCakesEaten % SPEED_RAMP_INTERVAL === 0) {
-    currentSpeed = Math.min(state.currentSpeed * SPEED_RAMP_FACTOR, speedCap);
+    currentSpeed = Math.min(
+      state.currentSpeed * SPEED_RAMP_FACTOR,
+      speedCapFor(state.mode),
+    );
     currentSpawnMs = Math.max(
       state.currentSpawnMs * SPAWN_RAMP_FACTOR,
-      spawnFloor,
+      spawnFloorFor(state.mode),
     );
   }
 
-  // In normal mode, reaching VICTORY_SCORE triggers victory
-  // In endless mode, game continues indefinitely
-  const reachedVictory = state.mode === "normal" && newScore >= VICTORY_SCORE;
+  // Lenient-mode side-effects (Easy & Normal):
+  //   - heart cake: restore one life (capped at EASY_MAX_LIVES)
+  //   - regular/golden cake: grow one size step (capped at EASY_MAX_SIZE)
+  let birdSize = state.birdSize;
+  let livesLeft = state.livesLeft;
+  if (isLenientMode(state.mode)) {
+    if (hit.kind === "heart") {
+      livesLeft = Math.min(EASY_MAX_LIVES, livesLeft + 1);
+    } else {
+      birdSize = Math.min(EASY_MAX_SIZE, birdSize + 1);
+    }
+  }
+
+  // Only Easy has a victory (25 cakes). Normal & Hard are endless.
+  const reachedVictory =
+    hasVictoryCondition(state.mode) && newCakesEaten >= VICTORY_CAKES;
 
   return {
     ...state,
@@ -118,6 +185,8 @@ function resolveCakeEaten(
     currentSpawnMs,
     combo: newCombo,
     lastEatTime: now,
+    birdSize,
+    livesLeft,
     lastEatenCake: {
       x: hit.left,
       y: hit.bottom,
@@ -129,10 +198,15 @@ function resolveCakeEaten(
   };
 }
 
+// ─── Reducer ─────────────────────────────────────────────────────────────────
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
     case "INTRO_DONE":
       return state.phase === "intro" ? { ...state, phase: "ready" } : state;
+
+    case "SET_MODE":
+      // Allow mode changes only from the ready screen
+      return state.phase === "ready" ? { ...state, mode: action.mode } : state;
 
     case "START":
       return state.phase === "ready"
@@ -183,13 +257,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
           CAKE_SPEED_BASE *
             SPEED_RAMP_FACTOR **
               Math.floor(action.cakesEaten / SPEED_RAMP_INTERVAL),
-          CAKE_SPEED_BASE * SPEED_CAP_FACTOR,
+          speedCapFor(state.mode),
         ),
         currentSpawnMs: Math.max(
           CAKE_SPAWN_MS_BASE *
             SPAWN_RAMP_FACTOR **
               Math.floor(action.cakesEaten / SPEED_RAMP_INTERVAL),
-          SPAWN_FLOOR_MS,
+          spawnFloorFor(state.mode),
         ),
       };
 
@@ -214,7 +288,64 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         moveCake(cake, state.currentSpeed, action.dt),
       );
 
+      // ─── Floor collision ─────────────────────────────────────────────────
       if (hitFloor) {
+        // Lenient modes (Easy & Normal): bounce back if lives remain
+        if (isLenientMode(state.mode) && state.livesLeft > 1) {
+          return {
+            ...state,
+            birdBottom: BIRD_MIN_BOTTOM,
+            birdVy: EASY_BOUNCE_VY,
+            cakes: movedCakes,
+            livesLeft: state.livesLeft - 1,
+            // Do not gameover, but still trigger shake feedback
+            lastMissedAt: performance.now(),
+          };
+        }
+        // Last life OR strict mode — actual gameover
+        return {
+          ...state,
+          birdBottom: bottom,
+          birdVy: vy,
+          cakes: movedCakes,
+          livesLeft: isLenientMode(state.mode) ? 0 : state.livesLeft,
+          phase: "gameover",
+          lastMissedAt: performance.now(),
+        };
+      }
+
+      // ─── Cake offscreen (missed) ─────────────────────────────────────────
+      if (movedCakes.some(cakeOffscreen)) {
+        // Lenient modes: missing a cake also costs a life. Reset bird size &
+        // combo. Game over only when the last life is spent.
+        if (isLenientMode(state.mode)) {
+          const newLives = state.livesLeft - 1;
+          if (newLives > 0) {
+            return {
+              ...state,
+              birdBottom: bottom,
+              birdVy: vy,
+              cakes: movedCakes.filter((c) => !cakeOffscreen(c)),
+              birdSize: 1,
+              livesLeft: newLives,
+              combo: 0,
+              lastMissedAt: performance.now(),
+            };
+          }
+          // Out of lives — game over
+          return {
+            ...state,
+            birdBottom: bottom,
+            birdVy: vy,
+            cakes: movedCakes,
+            birdSize: 1,
+            livesLeft: 0,
+            combo: 0,
+            phase: "gameover",
+            lastMissedAt: performance.now(),
+          };
+        }
+        // Hard mode: any miss is instant gameover
         return {
           ...state,
           birdBottom: bottom,
@@ -225,23 +356,22 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
         };
       }
 
-      if (movedCakes.some(cakeOffscreen)) {
-        return {
-          ...state,
-          birdBottom: bottom,
-          birdVy: vy,
-          cakes: movedCakes,
-          phase: "gameover",
-          lastMissedAt: performance.now(),
-        };
-      }
+      // ─── Cake collision (eaten) ─────────────────────────────────────────
+      // Effective hitbox scales with birdSize (lenient modes grow the bird)
+      const scale = birdScaleFor(state);
+      const cx = BIRD_LEFT + BIRD_WIDTH / 2;
+      const cy = bottom + BIRD_HEIGHT / 2;
+      const ew = BIRD_WIDTH * scale;
+      const eh = BIRD_HEIGHT * scale;
+      const hx = cx - ew / 2;
+      const hy = cy - eh / 2;
 
       const hit = movedCakes.find((cake) =>
         boxesOverlap(
-          BIRD_LEFT,
-          bottom,
-          BIRD_WIDTH,
-          BIRD_HEIGHT,
+          hx,
+          hy,
+          ew,
+          eh,
           cake.left,
           cake.bottom,
           CAKE_WIDTH,

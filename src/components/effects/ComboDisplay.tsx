@@ -9,9 +9,28 @@ interface ComboDisplayProps {
 }
 
 /**
- * Displays a combo counter when player eats cakes in quick succession.
- * Shows fire emoji escalation and color changes.
+ * Compact combo pill. Colour + label escalate with combo tier, but the layout
+ * stays small so it doesn't dominate the screen at high combos.
+ *
+ * Perf notes:
+ *   - The outer motion.div does NOT use `key={combo}`, so it only runs its
+ *     spring enter animation once per combo streak (not once per cake eaten).
+ *   - Only the number itself gets a tiny scale pulse via an inner motion.span
+ *     keyed on `combo` — cheap and doesn't trigger the surrounding layout.
+ *   - Font size is fixed (no runaway growth at high combos).
  */
+
+const TIERS = [
+  { min: 5, color: "#ff2f4a", emoji: "🔥", label: "INSANE!" },
+  { min: 4, color: "#ff6a00", emoji: "🔥", label: "AMAZING!" },
+  { min: 3, color: "#ff9d00", emoji: "🔥", label: "GREAT!" },
+  { min: 2, color: "#ffd400", emoji: "⚡", label: "COMBO!" },
+] as const;
+
+function tierFor(combo: number) {
+  return TIERS.find((t) => combo >= t.min) ?? TIERS[TIERS.length - 1];
+}
+
 export default function ComboDisplay({
   combo,
   reducedMotion,
@@ -27,24 +46,15 @@ export default function ComboDisplay({
     setVisible(false);
   }, [combo]);
 
-  const getComboStyle = () => {
-    if (combo >= 5)
-      return { color: "#ff0000", emoji: "🔥🔥🔥", label: "INSANE!" };
-    if (combo >= 4)
-      return { color: "#ff4500", emoji: "🔥🔥", label: "AMAZING!" };
-    if (combo >= 3) return { color: "#ff8c00", emoji: "🔥", label: "GREAT!" };
-    return { color: "#ffd700", emoji: "⚡", label: "COMBO!" };
-  };
-
-  const style = getComboStyle();
+  const tier = tierFor(combo);
 
   if (reducedMotion) {
     return visible ? (
       <div
-        className="absolute top-16 left-1/2 -translate-x-1/2 z-20 font-bold text-2xl pointer-events-none"
-        style={{ color: style.color }}
+        className="absolute top-16 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full bg-black/55 font-bold text-base whitespace-nowrap"
+        style={{ color: tier.color }}
       >
-        {style.emoji} x{combo} {style.label}
+        {tier.emoji} x{combo} {tier.label}
       </div>
     ) : null;
   }
@@ -53,19 +63,29 @@ export default function ComboDisplay({
     <AnimatePresence>
       {visible && (
         <motion.div
-          key={combo}
-          className="absolute top-16 left-1/2 z-20 font-bold pointer-events-none select-none"
+          className="absolute top-16 left-1/2 z-20 pointer-events-none select-none px-3 py-1 rounded-full bg-black/55 backdrop-blur-sm font-bold text-lg whitespace-nowrap shadow-lg"
           style={{
-            color: style.color,
-            textShadow: `0 0 10px ${style.color}, 0 2px 4px rgba(0,0,0,0.5)`,
-            fontSize: `${Math.min(1.5 + combo * 0.2, 3)}rem`,
+            color: tier.color,
+            textShadow: "0 1px 3px rgba(0,0,0,0.6)",
           }}
           initial={{ opacity: 0, scale: 0.5, x: "-50%", y: -10 }}
           animate={{ opacity: 1, scale: 1, x: "-50%", y: 0 }}
-          exit={{ opacity: 0, scale: 1.3, x: "-50%", y: -20 }}
-          transition={{ type: "spring", stiffness: 400, damping: 15 }}
+          exit={{ opacity: 0, scale: 0.8, x: "-50%", y: -10 }}
+          transition={{ type: "spring", stiffness: 320, damping: 22 }}
         >
-          {style.emoji} x{combo} {style.label}
+          <span>{tier.emoji}</span>{" "}
+          {/* Tiny pulse just on the number, keyed by combo so it re-triggers
+              per cake but the surrounding pill stays put. */}
+          <motion.span
+            key={combo}
+            className="inline-block"
+            initial={{ scale: 1.35 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.15, ease: "easeOut" }}
+          >
+            x{combo}
+          </motion.span>{" "}
+          <span>{tier.label}</span>
         </motion.div>
       )}
     </AnimatePresence>

@@ -133,53 +133,56 @@ export default function ConversationOverlay({
           next();
         }}
       >
-        <div className="relative min-h-[180px] rounded-2xl border border-white/20 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 shadow-2xl ring-1 ring-black/40 px-8 py-6 pr-[220px]">
+        <div className="relative rounded-2xl border border-white/20 bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 shadow-2xl ring-1 ring-black/40 px-8 pt-8 pb-4">
           {/* Speaker name tag */}
           <div className="absolute -top-3 left-6 px-4 py-1 rounded-full bg-gradient-to-r from-pink-500 to-rose-400 text-white text-sm font-bold shadow-lg tracking-wider">
             {current.speaker === "shan" ? "杉杉" : "云宝"}
           </div>
 
-          <AnimatePresence mode="wait">
-            <motion.p
-              key={`text-${index}`}
-              className="text-white text-lg md:text-xl font-medium leading-relaxed pt-2"
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.25 }}
-            >
-              {current.text}
-            </motion.p>
-          </AnimatePresence>
-
-          {/* Continue indicator */}
-          <div className="absolute right-6 bottom-4 flex items-center gap-2">
-            <span className="text-white/70 text-xs">
-              {isLast ? "点击开始游戏" : "点击继续"}
-            </span>
-            <motion.span
-              className="text-pink-300 text-lg"
-              animate={{ y: [0, 3, 0] }}
-              transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
-            >
-              ▼
-            </motion.span>
+          {/* Text row — gets its own full-width line so nothing squeezes it */}
+          <div className="min-h-[96px] pr-4">
+            <AnimatePresence mode="wait">
+              <motion.p
+                key={`text-${index}`}
+                className="text-white text-lg md:text-xl font-medium leading-relaxed"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+              >
+                {current.text}
+              </motion.p>
+            </AnimatePresence>
           </div>
 
-          {/* Progress dots */}
-          <div className="absolute left-6 bottom-4 flex gap-1.5">
-            {conversations.map((conv, i) => (
-              <div
-                key={conv.text}
-                className={`h-1.5 rounded-full transition-all ${
-                  i === index
-                    ? "w-6 bg-pink-400"
-                    : i < index
-                      ? "w-1.5 bg-white/80"
-                      : "w-1.5 bg-white/25"
-                }`}
-              />
-            ))}
+          {/* Bottom row — progress dots (left) + continue hint (right) */}
+          <div className="mt-3 pt-3 border-t border-white/10 flex items-center justify-between gap-3">
+            <div className="flex gap-1.5">
+              {conversations.map((conv, i) => (
+                <div
+                  key={conv.text}
+                  className={`h-1.5 rounded-full transition-all ${
+                    i === index
+                      ? "w-6 bg-pink-400"
+                      : i < index
+                        ? "w-1.5 bg-white/80"
+                        : "w-1.5 bg-white/25"
+                  }`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="text-white/70 text-xs whitespace-nowrap">
+                {isLast ? "点击开始游戏" : "点击继续"}
+              </span>
+              <motion.span
+                className="text-pink-300 text-lg"
+                animate={{ y: [0, 3, 0] }}
+                transition={{ duration: 1, repeat: Number.POSITIVE_INFINITY }}
+              >
+                ▼
+              </motion.span>
+            </div>
           </div>
         </div>
       </div>

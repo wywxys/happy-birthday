@@ -5,8 +5,8 @@ export type Phase =
   | "paused"
   | "gameover"
   | "victory";
-export type CakeKind = "regular" | "golden";
-export type GameMode = "normal" | "endless";
+export type CakeKind = "regular" | "golden" | "heart";
+export type GameMode = "easy" | "normal" | "hard";
 export interface Cake {
   id: number;
   left: number;
@@ -16,6 +16,7 @@ export interface Cake {
 export type GameAction =
   | { type: "INTRO_DONE" }
   | { type: "START"; mode?: GameMode }
+  | { type: "SET_MODE"; mode: GameMode }
   | { type: "JUMP" }
   | { type: "PAUSE" }
   | { type: "RESUME" }
@@ -49,4 +50,9 @@ export interface GameState {
   /** Combo tracking */
   combo: number;
   lastEatTime: number;
+  /** Easy-mode: 1 (default) up to 9 (max, wears crown). Grows per cake, resets on miss. */
+  birdSize: number;
+  /** Lenient modes (Easy & Normal): remaining lives. Costs 1 per floor-touch
+   *  or missed cake; refilled by heart cakes up to EASY_MAX_LIVES. */
+  livesLeft: number;
 }

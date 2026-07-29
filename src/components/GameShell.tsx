@@ -4,13 +4,21 @@ import { AnimatePresence, motion } from "motion/react";
 import Image from "next/image";
 import { useCallback, useEffect, useReducer, useRef, useState } from "react";
 import * as constants from "../game/constants";
-import { gameReducer, initialGameState } from "../game/gameReducer";
+import {
+  birdScaleFor,
+  gameReducer,
+  hasVictoryCondition,
+  initialGameState,
+  isLenientMode,
+} from "../game/gameReducer";
 import {
   addToLeaderboard,
-  isEndlessUnlocked,
-  unlockEndless,
+  isModesUnlocked,
+  unlockModes,
 } from "../game/leaderboard";
+import { MODE_META, modeShortLabel } from "../game/modeMeta";
 import { createCake } from "../game/spawner";
+import type { GameMode } from "../game/types";
 import { useBGM } from "../hooks/useBGM";
 import { useGameLoop } from "../hooks/useGameLoop";
 import { usePersistedNumber } from "../hooks/usePersisted";
@@ -18,11 +26,10 @@ import { useReducedMotion } from "../hooks/useReducedMotion";
 import { useSoundEffects } from "../hooks/useSoundEffect";
 import ConversationOverlay from "./ConversationOverlay";
 import LeaderboardPanel from "./LeaderboardPanel";
+import ModePicker from "./ModePicker";
 import VictoryScreen from "./VictoryScreen";
-import { BirdTrail } from "./effects/BirdTrail";
 import ComboDisplay from "./effects/ComboDisplay";
 import DifficultyMeter from "./effects/DifficultyMeter";
-import MilestoneFlash from "./effects/MilestoneFlash";
 import ParallaxBackground from "./effects/ParallaxBackground";
 import { ParticleBurst, burst } from "./effects/ParticleBurst";
 import ScorePop from "./effects/ScorePop";
@@ -38,8 +45,7 @@ const worldStyle: React.CSSProperties = {
   transformOrigin: "top left",
   transform: "scale(var(--game-scale, 1))",
 };
-// Ground and sky styles are now handled by ParallaxBackground canvas
-const readyStyle = { top: "30%" };
+const readyStyle: React.CSSProperties = { top: "22%" };
 const promptStyle = { textShadow: "2px 2px 6px rgba(0,0,0,0.6)" };
 
 export default function GameShell() {
@@ -59,15 +65,39 @@ export default function GameShell() {
     currentSpeed: state.currentSpeed,
   });
 
-  // Endless mode & leaderboard state
-  const [endlessUnlocked, setEndlessUnlocked] = useState(false);
+  // Mode unlock (Normal + Hard) & leaderboard state
+  const [modesUnlocked, setModesUnlocked] = useState(false);
+  const [justUnlocked, setJustUnlocked] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const maxComboRef = useRef(0);
 
-  // Check endless unlock status on mount
+  // Check unlock status on mount + restore preferred mode (if any)
   useEffect(() => {
-    setEndlessUnlocked(isEndlessUnlocked());
+    setModesUnlocked(isModesUnlocked());
+    try {
+      const saved = localStorage.getItem("happy-birthday-preferred-mode");
+      if (
+        saved === "easy" ||
+        (saved === "normal" && isModesUnlocked()) ||
+        (saved === "hard" && isModesUnlocked())
+      ) {
+        dispatch({ type: "SET_MODE", mode: saved });
+      }
+    } catch {
+      /* ignore */
+    }
   }, []);
+
+  // Persist mode preference whenever it changes on the ready screen
+  useEffect(() => {
+    if (state.phase === "ready") {
+      try {
+        localStorage.setItem("happy-birthday-preferred-mode", state.mode);
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [state.mode, state.phase]);
 
   // Track max combo during a run
   useEffect(() => {
@@ -116,7 +146,6 @@ export default function GameShell() {
     };
     update();
     window.addEventListener("resize", update);
-    // Also handle mobile viewport changes (address bar hide/show)
     window.visualViewport?.addEventListener("resize", update);
     return () => {
       window.removeEventListener("resize", update);
@@ -144,14 +173,18 @@ export default function GameShell() {
     if (reducedMotion) return;
     const le = state.lastEatenCake;
     if (le) {
+      const colors =
+        le.kind === "golden"
+          ? ["#ffd700", "#fff8dc", "#ffe873"]
+          : le.kind === "heart"
+            ? ["#ff5c8a", "#ff8fa8", "#ffffff"]
+            : ["#ffb6c1", "#ff69b4", "#ffffff"];
       burst(
         particleContainerRef.current,
         le.x + constants.CAKE_WIDTH / 2,
         le.y + constants.CAKE_HEIGHT / 2,
         le.kind === "golden" ? 10 : 6,
-        le.kind === "golden"
-          ? ["#ffd700", "#fff8dc", "#ffe873"]
-          : ["#ffb6c1", "#ff69b4", "#ffffff"],
+        colors,
       );
     }
   }, [state.lastEatenCake?.id]);
@@ -210,7 +243,19 @@ export default function GameShell() {
     if (state.phase !== "playing") return;
     const id = setInterval(() => {
       if (performance.now() < hitstopUntilRef.current) return;
-      dispatch({ type: "SPAWN_CAKE", cake: createCake({ allowGolden: true }) });
+      // Read latest state via ref so we don't restart the interval on every
+      // livesLeft change. Heart cakes only spawn in lenient modes AND when
+      // the player is missing at least one life — no point dropping heals
+      // at max HP.
+      const cur = stateRef.current;
+      dispatch({
+        type: "SPAWN_CAKE",
+        cake: createCake({
+          allowGolden: true,
+          allowHeart:
+            isLenientMode(cur.mode) && cur.livesLeft < constants.EASY_MAX_LIVES,
+        }),
+      });
     }, state.currentSpawnMs);
     return () => clearInterval(id);
   }, [state.phase, state.currentSpawnMs]);
@@ -263,12 +308,16 @@ export default function GameShell() {
     } else if (state.phase === "paused") dispatch({ type: "RESUME" });
   }, [state.phase, state.mode, sfx]);
 
-  const handleRestart = useCallback(() => dispatch({ type: "RESET" }), []);
-
-  const handleStartEndless = useCallback(() => {
+  const handleRestart = useCallback(() => {
+    setJustUnlocked(false);
     dispatch({ type: "RESET" });
-    // After reset puts us in "ready", immediately start in endless mode
-    setTimeout(() => dispatch({ type: "START", mode: "endless" }), 0);
+  }, []);
+
+  const handleStartMode = useCallback((mode: GameMode) => {
+    setJustUnlocked(false);
+    dispatch({ type: "RESET" });
+    // After reset puts us in "ready", start with the chosen mode
+    setTimeout(() => dispatch({ type: "START", mode }), 0);
   }, []);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: evaluate once per terminal phase transition using pre-write best
@@ -286,10 +335,11 @@ export default function GameShell() {
         maxCombo: maxComboRef.current,
       });
 
-      // Unlock endless on first victory
-      if (state.phase === "victory" && !endlessUnlocked) {
-        unlockEndless();
-        setEndlessUnlocked(true);
+      // Any victory unlocks the other modes (persisted)
+      if (state.phase === "victory" && !modesUnlocked) {
+        unlockModes();
+        setModesUnlocked(true);
+        setJustUnlocked(true);
       }
     } else {
       isNewBestRef.current = false;
@@ -319,6 +369,39 @@ export default function GameShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, [state.phase]);
 
+  // Auto-pause when the user leaves the game (tab switch, minimize, phone
+  // home button, screen lock, or clicking to a different app on desktop).
+  // We never auto-resume — the user must click / press to acknowledge.
+  useEffect(() => {
+    const pauseIfPlaying = () => {
+      if (stateRef.current.phase === "playing") {
+        dispatch({ type: "PAUSE" });
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) pauseIfPlaying();
+    };
+    // window `blur` catches the case where the browser stays visible but the
+    // user clicked into another app (desktop). Combined with visibilitychange
+    // this covers mobile home button, alt-tab, minimize, screen lock, etc.
+    const onBlur = () => pauseIfPlaying();
+
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("blur", onBlur);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("blur", onBlur);
+    };
+  }, []);
+
+  // Derived visual state
+  const birdScale = birdScaleFor(state);
+  const isLenient = isLenientMode(state.mode);
+  const hasCrown = isLenient && state.birdSize >= constants.EASY_MAX_SIZE;
+  const modeIcon = MODE_META[state.mode].icon;
+  // Only Easy shows an explicit victory target ("X / 25"); Normal & Hard are endless
+  const showVictoryTarget = hasVictoryCondition(state.mode);
+
   return (
     <div
       className="w-screen bg-neutral-900 overflow-hidden relative flex items-center justify-center select-none"
@@ -332,7 +415,7 @@ export default function GameShell() {
         style={viewportStyle}
       >
         <div className="absolute inset-0" style={worldStyle}>
-          {/* Layer 1: Background canvas (bottom) */}
+          {/* Layer 1: Background canvas */}
           <ParallaxBackground
             scrolling={state.phase === "playing"}
             speedFactor={state.currentSpeed / constants.CAKE_SPEED_BASE}
@@ -340,17 +423,11 @@ export default function GameShell() {
             reducedMotion={reducedMotion}
           />
         </div>
-        {/* Layer 2: Game objects (on top of canvas, separate stacking context) */}
+        {/* Layer 2: Game objects (isolated stacking context) */}
         <div
           className="absolute inset-0"
           style={{ ...worldStyle, isolation: "isolate" }}
         >
-          {/* Bird trail effect */}
-          <BirdTrail
-            birdBottom={state.birdBottom}
-            reducedMotion={reducedMotion}
-          />
-          {/* Bird character with velocity-based tilt */}
           <div
             className={`absolute transition-none${state.combo >= 2 ? " combo-active" : ""}`}
             style={{
@@ -362,29 +439,59 @@ export default function GameShell() {
               backgroundSize: "cover",
               backgroundRepeat: "no-repeat",
               transform: reducedMotion
-                ? undefined
-                : `rotate(${Math.max(-25, Math.min(25, -state.birdVy * 0.04))}deg)`,
+                ? `scale(${birdScale})`
+                : `scale(${birdScale}) rotate(${Math.max(-25, Math.min(25, -state.birdVy * 0.04))}deg)`,
               transformOrigin: "center center",
             }}
           />
+          {/* Crown overlay (easy-mode max size) */}
+          {hasCrown && (
+            <div
+              className="absolute pointer-events-none"
+              style={{
+                left: `${constants.BIRD_LEFT + constants.BIRD_WIDTH / 2 - 18}px`,
+                bottom: `${state.birdBottom + (constants.BIRD_HEIGHT * birdScale) / 2 + constants.BIRD_HEIGHT / 2 - 4}px`,
+                fontSize: "32px",
+                lineHeight: 1,
+                filter: "drop-shadow(0 2px 4px rgba(0,0,0,0.4))",
+              }}
+            >
+              👑
+            </div>
+          )}
           {state.cakes.map((c) => (
+            // Positioning wrapper — keeps the heart emoji OUT of the cake's
+            // CSS filter (which would otherwise tint the emoji too).
             <div
               key={c.id}
-              className={`absolute${c.kind === "golden" ? " golden-cake" : ""}`}
+              className="absolute pointer-events-none"
               style={{
                 left: `${c.left}px`,
                 bottom: `${c.bottom}px`,
                 width: `${constants.CAKE_WIDTH}px`,
                 height: `${constants.CAKE_HEIGHT}px`,
-                backgroundImage: "url(/cake.png)",
-                backgroundSize: "cover",
-                backgroundRepeat: "no-repeat",
-                filter:
-                  c.kind === "golden"
-                    ? "hue-rotate(45deg) saturate(2) brightness(1.1) drop-shadow(0 0 6px gold)"
-                    : undefined,
               }}
-            />
+            >
+              <div
+                className={`absolute inset-0${c.kind === "golden" ? " golden-cake" : ""}`}
+                style={{
+                  backgroundImage: "url(/cake.png)",
+                  backgroundSize: "cover",
+                  backgroundRepeat: "no-repeat",
+                  filter:
+                    c.kind === "golden"
+                      ? "hue-rotate(45deg) saturate(2) brightness(1.1) drop-shadow(0 0 6px gold)"
+                      : c.kind === "heart"
+                        ? "hue-rotate(-30deg) saturate(1.5) drop-shadow(0 0 6px #ff5c8a)"
+                        : undefined,
+                }}
+              />
+              {c.kind === "heart" && (
+                <div className="absolute inset-0 flex items-center justify-center text-2xl drop-shadow-md">
+                  ❤️
+                </div>
+              )}
+            </div>
           ))}
           <ScorePop
             pops={pops}
@@ -392,57 +499,61 @@ export default function GameShell() {
             reducedMotion={reducedMotion}
           />
           <ParticleBurst containerRef={particleContainerRef} />
-          {/* Combo display */}
           <ComboDisplay combo={state.combo} reducedMotion={reducedMotion} />
           {state.phase === "ready" && (
             <div
-              className="absolute left-0 right-0 flex flex-col items-center gap-3"
+              className="absolute left-0 right-0 flex flex-col items-center gap-4 px-4"
               style={readyStyle}
             >
               <h1
-                className="text-white font-bold text-4xl px-6 py-3 rounded-2xl bg-black/40 backdrop-blur-sm shadow-xl animate-pulse"
+                className="text-white font-bold text-3xl md:text-4xl px-6 py-3 rounded-2xl bg-black/40 backdrop-blur-sm shadow-xl animate-pulse"
                 style={promptStyle}
               >
-                点击屏幕开始游戏
+                点击屏幕开始
               </h1>
-              {state.mode === "endless" && (
-                <span className="text-purple-300 text-lg font-bold bg-black/40 px-4 py-1 rounded-full">
-                  ♾️ 无尽模式
-                </span>
-              )}
-              {endlessUnlocked && state.mode === "normal" && (
-                <button
-                  type="button"
-                  className="text-purple-300/80 text-sm bg-black/30 px-4 py-1 rounded-full hover:bg-black/50 transition-colors cursor-pointer"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    dispatch({ type: "START", mode: "endless" });
-                  }}
-                >
-                  或切换 ♾️ 无尽模式
-                </button>
-              )}
+              <ModePicker
+                currentMode={state.mode}
+                modesUnlocked={modesUnlocked}
+                onSelect={(m) => dispatch({ type: "SET_MODE", mode: m })}
+              />
             </div>
           )}
         </div>
-        <MilestoneFlash
-          cakesEaten={state.cakesEaten}
-          reducedMotion={reducedMotion}
-        />
         {hudVisible && (
-          <div className="absolute top-4 left-4 px-4 py-2 rounded-full bg-black/50 text-white font-bold text-xl backdrop-blur-sm shadow-lg z-10">
-            {state.mode === "endless" ? "♾️" : "🎂"}{" "}
-            <motion.span
-              key={state.score}
-              className="inline-block"
-              initial={{ scale: 1.4 }}
-              animate={{ scale: 1 }}
-              transition={{ duration: reducedMotion ? 0 : 0.25 }}
-            >
-              {state.score}
-            </motion.span>
-            {state.mode === "normal" && (
-              <span> / {constants.VICTORY_SCORE}</span>
+          <div className="absolute top-4 left-4 flex flex-col gap-2 z-10">
+            <div className="px-4 py-2 rounded-full bg-black/50 text-white font-bold text-xl backdrop-blur-sm shadow-lg">
+              {modeIcon}{" "}
+              <motion.span
+                key={state.cakesEaten}
+                className="inline-block"
+                initial={{ scale: 1.4 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: reducedMotion ? 0 : 0.25 }}
+              >
+                {state.cakesEaten}
+              </motion.span>
+              {showVictoryTarget && <span> / {constants.VICTORY_CAKES}</span>}
+              <span className="text-white/60 text-sm ml-2">
+                · {state.score} 分
+              </span>
+            </div>
+            {/* Life meter — shown in lenient modes (Easy & Normal) */}
+            {isLenient && state.phase === "playing" && (
+              <div className="px-3 py-1 rounded-full bg-black/50 text-white text-lg backdrop-blur-sm shadow-lg flex items-center gap-1">
+                {Array.from({ length: constants.EASY_MAX_LIVES }).map(
+                  (_, i) => (
+                    <span
+                      // biome-ignore lint/suspicious/noArrayIndexKey: fixed set of life slots
+                      key={i}
+                      className={
+                        i < state.livesLeft ? "" : "grayscale opacity-30"
+                      }
+                    >
+                      ❤️
+                    </span>
+                  ),
+                )}
+              </div>
             )}
           </div>
         )}
@@ -480,7 +591,6 @@ export default function GameShell() {
             极简动效已启用
           </div>
         )}
-        {/* Difficulty/speed meter */}
         {hudVisible && (
           <DifficultyMeter
             currentSpeed={state.currentSpeed}
@@ -496,23 +606,23 @@ export default function GameShell() {
       )}
       {state.phase === "gameover" && (
         <motion.div
-          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm px-4"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.3 }}
           onClick={(e) => e.stopPropagation()}
         >
-          <h2 className="text-4xl md:text-6xl font-bold text-red-400 mb-4">
+          <h2 className="text-4xl md:text-6xl font-bold text-red-400 mb-3">
             游戏结束 😢
           </h2>
-          {state.mode === "endless" && (
-            <span className="text-purple-300/80 text-sm mb-2">♾️ 无尽模式</span>
-          )}
-          <p className="text-white/80 text-xl mb-6">
-            最终得分: {state.score} 🎂
+          <div className="text-white/70 text-sm mb-2">
+            {modeShortLabel(state.mode)}
+          </div>
+          <p className="text-white/80 text-xl mb-1">
+            吃到 {state.cakesEaten} 🎂 · {state.score} 分
           </p>
           <p className="text-white/80 text-lg mb-6">
-            最佳: {best} 🎂{" "}
+            最佳: {best} 分{" "}
             {isNewBest && (
               <motion.span
                 initial={{ scale: 0 }}
@@ -523,25 +633,35 @@ export default function GameShell() {
               </motion.span>
             )}
           </p>
-          <div className="flex flex-col sm:flex-row gap-3 items-center">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 items-center justify-center max-w-lg">
             <motion.button
               onClick={handleRestart}
-              className="px-8 py-4 bg-gradient-to-r from-red-500 to-orange-600 text-white text-xl font-bold rounded-full shadow-lg cursor-pointer"
+              className="px-6 py-3 bg-gradient-to-r from-red-500 to-orange-600 text-white text-lg font-bold rounded-full shadow-lg cursor-pointer"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
               再试一次 🎮
             </motion.button>
-            {endlessUnlocked && state.mode !== "endless" && (
-              <motion.button
-                onClick={handleStartEndless}
-                className="px-6 py-3 bg-gradient-to-r from-indigo-500 to-violet-600 text-white text-lg font-bold rounded-full shadow-lg cursor-pointer"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                无尽模式 ♾️
-              </motion.button>
-            )}
+            {(["easy", "normal", "hard"] as const)
+              .filter((id) => {
+                if (id === state.mode) return false;
+                if (id === "easy") return true;
+                return modesUnlocked;
+              })
+              .map((id) => {
+                const m = MODE_META[id];
+                return (
+                  <motion.button
+                    key={id}
+                    onClick={() => handleStartMode(id)}
+                    className={`px-5 py-3 bg-gradient-to-r ${m.gradient} text-white font-bold rounded-full shadow-lg cursor-pointer`}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    {m.label} {m.icon}
+                  </motion.button>
+                );
+              })}
           </div>
           <motion.button
             onClick={() => setShowLeaderboard(true)}
@@ -559,13 +679,14 @@ export default function GameShell() {
           score={state.score}
           best={best}
           isNewBest={isNewBest}
+          mode={state.mode}
           onRestart={handleRestart}
-          endlessUnlocked={endlessUnlocked}
-          onStartEndless={handleStartEndless}
+          modesUnlocked={modesUnlocked}
+          justUnlocked={justUnlocked}
+          onStartMode={handleStartMode}
           onShowLeaderboard={() => setShowLeaderboard(true)}
         />
       )}
-      {/* Leaderboard overlay */}
       <AnimatePresence>
         {showLeaderboard && (
           <LeaderboardPanel
